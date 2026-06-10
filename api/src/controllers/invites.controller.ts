@@ -50,6 +50,16 @@ export const respondToInvite = async (req: Request, res: Response) => {
   }
 };
 
+export const cancelInvite = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId as string;
+    await invitesService.cancelInvite(req.params.id as string, userId);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+};
+
 export const getInvites = async (req: Request, res: Response) => {
   try {
     const userId = req.userId as string;

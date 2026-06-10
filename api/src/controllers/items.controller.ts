@@ -10,7 +10,7 @@ const handleError = (error: unknown, res: Response) => {
 
 export const createItem = async (req: Request, res: Response) => {
   try {
-    const { listId } = req.params;
+    const { listId } = req.params as Record<string, string>;
     const { name, url, quantity = 1 } = req.body;
     if (!name) return res.status(400).json({ error: "Name is required" });
     const item = await itemsService.createItem(listId, req.userId!, name, url, quantity);
@@ -22,7 +22,7 @@ export const createItem = async (req: Request, res: Response) => {
 
 export const getItems = async (req: Request, res: Response) => {
   try {
-    const { listId } = req.params;
+    const { listId } = req.params as Record<string, string>;
     const items = await itemsService.getItems(listId, req.userId!);
     res.status(200).json(items);
   } catch (error) {
@@ -32,7 +32,7 @@ export const getItems = async (req: Request, res: Response) => {
 
 export const updateItem = async (req: Request, res: Response) => {
   try {
-    const { listId, itemId } = req.params;
+    const { listId, itemId } = req.params as Record<string, string>;
     const { name, url, quantity, checked } = req.body;
     if (!name && !url && !quantity && checked === undefined)
       return res.status(400).json({ error: "Nothing to update" });
@@ -45,7 +45,7 @@ export const updateItem = async (req: Request, res: Response) => {
 
 export const deleteItem = async (req: Request, res: Response) => {
   try {
-    const { listId, itemId } = req.params;
+    const { listId, itemId } = req.params as Record<string, string>;
     await itemsService.deleteItem(listId, itemId, req.userId!);
     res.status(204).send();
   } catch (error) {

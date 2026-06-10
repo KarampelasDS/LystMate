@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.post("/", invitesController.sendInvite);
 router.patch("/:id", invitesController.respondToInvite);
+router.delete("/:id", invitesController.cancelInvite);
 router.get("/", invitesController.getInvites);
 
 export default router;

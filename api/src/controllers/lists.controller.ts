@@ -5,6 +5,9 @@ const handleError = (error: unknown, res: Response) => {
   if (error instanceof Error && error.message === "Forbidden") {
     return res.status(403).json({ error: "Forbidden" });
   }
+  if (error instanceof Error && error.message === "You must transfer ownership before leaving") {
+    return res.status(400).json({ error: error.message });
+  }
   return res.status(500).json({ error: "Internal server error" });
 };
 
@@ -35,7 +38,7 @@ export const getLists = async (req: Request, res: Response) => {
 
 export const getList = async (req: Request, res: Response) => {
   try {
-    const list = await listsService.getList(req.params.id, req.userId!);
+    const list = await listsService.getList(req.params.id as string, req.userId!);
     if (!list) return res.status(403).json({ error: "Forbidden" });
     res.json(list);
   } catch (error) {
@@ -45,7 +48,7 @@ export const getList = async (req: Request, res: Response) => {
 
 export const deleteList = async (req: Request, res: Response) => {
   try {
-    await listsService.deleteList(req.params.id, req.userId!);
+    await listsService.deleteList(req.params.id as string, req.userId!);
     res.status(204).send();
   } catch (error) {
     handleError(error, res);
@@ -58,8 +61,71 @@ export const renameList = async (req: Request, res: Response) => {
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
     }
-    const updatedList = await listsService.renameList(req.params.id, name, req.userId!);
+    const updatedList = await listsService.renameList(req.params.id as string, name, req.userId!);
     res.json(updatedList);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const changeListVisibility = async (req: Request, res: Response) => {
+  try {
+    const { visibility } = req.body;
+    if (!visibility) {
+      return res.status(400).json({ error: "Visibility is required" });
+    }
+    if (visibility !== "PUBLIC" && visibility !== "PRIVATE") {
+      return res.status(400).json({ error: "Visibility must be PUBLIC or PRIVATE" });
+    }
+    const list = await listsService.changeListVisibility(req.params.id as string, visibility, req.userId!);
+    res.json(list);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const leaveList = async (req: Request, res: Response) => {
+  try {
+    await listsService.leaveList(req.params.id as string, req.userId!);
+    res.status(204).send();
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const removeMember = async (req: Request, res: Response) => {
+  try {
+    await listsService.removeMember(req.params.id as string, req.params.memberId as string, req.userId!);
+    res.status(204).send();
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const transferOwnership = async (req: Request, res: Response) => {
+  try {
+    const { newOwnerId } = req.body;
+    if (!newOwnerId) {
+      return res.status(400).json({ error: "New owner ID is required" });
+    }
+    await listsService.transferOwnership(req.params.id as string, newOwnerId, req.userId!);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const updateMember = async (req: Request, res: Response) => {
+  try {
+    const { role } = req.body;
+    if (!role) {
+      return res.status(400).json({ error: "Role is required" });
+    }
+    if (role !== "MEMBER" && role !== "VIEWER") {
+      return res.status(400).json({ error: "Role must be MEMBER or VIEWER" });
+    }
+    const member = await listsService.updateMember(req.params.id as string, req.params.memberId as string, role, req.userId!);
+    res.json(member);
   } catch (error) {
     handleError(error, res);
   }

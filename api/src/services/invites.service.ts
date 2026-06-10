@@ -62,6 +62,18 @@ export const respondToInvite = async (
   });
 };
 
+export const cancelInvite = async (inviteId: string, userId: string) => {
+  const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
+  if (!invite) throw new Error("Forbidden");
+  const member = await prisma.listMember.findUnique({
+    where: { userId_listId: { userId, listId: invite.listId } },
+  });
+  if (!member || member.role !== "OWNER") throw new Error("Forbidden");
+  if (invite.status !== "PENDING") throw new Error("Invite already responded to");
+  await prisma.invite.delete({ where: { id: inviteId } });
+  return { success: true };
+};
+
 export const getInvites = async (userId: string) => {
   const invites = await prisma.invite.findMany({
     where: { inviteeId: userId, status: "PENDING" },

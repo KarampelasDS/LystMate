@@ -26,6 +26,7 @@ model List {
   invites   Invite[]
   createdAt DateTime     @default(now())
   visibility Visibility @default(PRIVATE)
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model ListMember {
@@ -48,6 +49,7 @@ model Item {
   list      List     @relation(fields: [listId], references: [id],onDelete: Cascade)
   listId    String
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Invite {
@@ -61,7 +63,7 @@ model Invite {
   role Role @default(VIEWER)
   status InviteStatus @default(PENDING)
   createdAt DateTime @default(now())
-
+  updatedAt DateTime @default(now()) @updatedAt
   @@unique([listId, inviteeId])
 }
 
