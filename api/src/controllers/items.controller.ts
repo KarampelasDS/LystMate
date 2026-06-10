@@ -13,7 +13,13 @@ export const createItem = async (req: Request, res: Response) => {
     const { listId } = req.params as Record<string, string>;
     const { name, url, quantity = 1 } = req.body;
     if (!name) return res.status(400).json({ error: "Name is required" });
-    const item = await itemsService.createItem(listId, req.userId!, name, url, quantity);
+    const item = await itemsService.createItem(
+      listId,
+      req.userId!,
+      name,
+      url,
+      quantity,
+    );
     res.status(201).json(item);
   } catch (error) {
     handleError(error, res);
@@ -23,7 +29,9 @@ export const createItem = async (req: Request, res: Response) => {
 export const getItems = async (req: Request, res: Response) => {
   try {
     const { listId } = req.params as Record<string, string>;
-    const items = await itemsService.getItems(listId, req.userId!);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const items = await itemsService.getItems(listId, req.userId!, page, limit);
     res.status(200).json(items);
   } catch (error) {
     handleError(error, res);
@@ -36,7 +44,15 @@ export const updateItem = async (req: Request, res: Response) => {
     const { name, url, quantity, checked } = req.body;
     if (!name && !url && !quantity && checked === undefined)
       return res.status(400).json({ error: "Nothing to update" });
-    const item = await itemsService.updateItem(listId, itemId, req.userId!, name, url, quantity, checked);
+    const item = await itemsService.updateItem(
+      listId,
+      itemId,
+      req.userId!,
+      name,
+      url,
+      quantity,
+      checked,
+    );
     res.status(200).json(item);
   } catch (error) {
     handleError(error, res);

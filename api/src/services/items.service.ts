@@ -1,6 +1,5 @@
 import prisma from "../utils/prisma";
 
-
 export const createItem = async (
   listId: string,
   userId: string,
@@ -11,8 +10,7 @@ export const createItem = async (
   const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId, listId } },
   });
-  if (!member || member.role === "VIEWER")
-    throw new Error("Forbidden");
+  if (!member || member.role === "VIEWER") throw new Error("Forbidden");
   const item = await prisma.item.create({
     data: {
       listId,
@@ -24,7 +22,12 @@ export const createItem = async (
   return item;
 };
 
-export const getItems = async (listId: string, userId: string) => {
+export const getItems = async (
+  listId: string,
+  userId: string,
+  page: number,
+  limit: number,
+) => {
   const list = await prisma.list.findUnique({
     where: { id: listId },
     select: { visibility: true },
@@ -32,12 +35,22 @@ export const getItems = async (listId: string, userId: string) => {
   const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId, listId } },
   });
-  if (!member && list?.visibility !== "PUBLIC")
-    throw new Error("Forbidden");
-  const items = await prisma.item.findMany({
-    where: { listId },
-  });
-  return items;
+  if (!member && list?.visibility !== "PUBLIC") throw new Error("Forbidden");
+  const [items, total] = await Promise.all([
+    prisma.item.findMany({
+      where: { listId },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.item.count({ where: { listId } }),
+  ]);
+  return {
+    data: items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 export const updateItem = async (
@@ -52,8 +65,7 @@ export const updateItem = async (
   const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId, listId } },
   });
-  if (!member || member.role === "VIEWER")
-    throw new Error("Forbidden");
+  if (!member || member.role === "VIEWER") throw new Error("Forbidden");
   const item = await prisma.item.findUnique({
     where: { id: itemId, listId },
   });
@@ -73,8 +85,7 @@ export const deleteItem = async (
   const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId, listId } },
   });
-  if (!member || member.role === "VIEWER")
-    throw new Error("Forbidden");
+  if (!member || member.role === "VIEWER") throw new Error("Forbidden");
   const item = await prisma.item.findUnique({
     where: { id: itemId, listId },
   });

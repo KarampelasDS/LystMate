@@ -34,7 +34,9 @@ export const respondToInvite = async (req: Request, res: Response) => {
       });
     }
     if (response !== "ACCEPTED" && response !== "REJECTED") {
-      return res.status(400).json({ error: "Response must be ACCEPTED or REJECTED" });
+      return res
+        .status(400)
+        .json({ error: "Response must be ACCEPTED or REJECTED" });
     }
     const userId = req.userId as string;
     const result = await invitesService.respondToInvite(
@@ -56,14 +58,18 @@ export const cancelInvite = async (req: Request, res: Response) => {
     await invitesService.cancelInvite(req.params.id as string, userId);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: err instanceof Error ? err.message : "Unknown error" });
+    res
+      .status(400)
+      .json({ error: err instanceof Error ? err.message : "Unknown error" });
   }
 };
 
 export const getInvites = async (req: Request, res: Response) => {
   try {
     const userId = req.userId as string;
-    const result = await invitesService.getInvites(userId);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const result = await invitesService.getInvites(userId, page, limit);
     res.status(200).json(result);
   } catch (err) {
     res

@@ -26,12 +26,23 @@ export const createList = async (
 };
 
 //Get User Lists
-export const getLists = async (userId: string) => {
-  const lists = await prisma.listMember.findMany({
-    where: { userId },
-    include: { list: true },
-  });
-  return lists.map((lm) => lm.list);
+export const getLists = async (userId: string, page: number, limit: number) => {
+  const [lists, total] = await Promise.all([
+    prisma.listMember.findMany({
+      where: { userId },
+      include: { list: true },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.listMember.count({ where: { userId } }),
+  ]);
+  return {
+    data: lists.map((lm) => lm.list),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 //Get List Details
@@ -102,7 +113,8 @@ export const removeMember = async (
     where: { userId_listId: { userId: requesterId, listId } },
   });
   if (!requester || requester.role !== "OWNER") throw new Error("Forbidden");
-  if (targetUserId === requesterId) throw new Error("Cannot remove yourself, use leave list");
+  if (targetUserId === requesterId)
+    throw new Error("Cannot remove yourself, use leave list");
   const target = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: targetUserId, listId } },
   });
@@ -124,7 +136,8 @@ export const updateMember = async (
     where: { userId_listId: { userId: requesterId, listId } },
   });
   if (!requester || requester.role !== "OWNER") throw new Error("Forbidden");
-  if (targetUserId === requesterId) throw new Error("Cannot change your own role");
+  if (targetUserId === requesterId)
+    throw new Error("Cannot change your own role");
   const target = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: targetUserId, listId } },
   });

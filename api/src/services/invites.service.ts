@@ -69,15 +69,31 @@ export const cancelInvite = async (inviteId: string, userId: string) => {
     where: { userId_listId: { userId, listId: invite.listId } },
   });
   if (!member || member.role !== "OWNER") throw new Error("Forbidden");
-  if (invite.status !== "PENDING") throw new Error("Invite already responded to");
+  if (invite.status !== "PENDING")
+    throw new Error("Invite already responded to");
   await prisma.invite.delete({ where: { id: inviteId } });
   return { success: true };
 };
 
-export const getInvites = async (userId: string) => {
-  const invites = await prisma.invite.findMany({
-    where: { inviteeId: userId, status: "PENDING" },
-    include: { list: true },
-  });
-  return invites;
+export const getInvites = async (
+  userId: string,
+  page: number,
+  limit: number,
+) => {
+  const [invites, total] = await Promise.all([
+    prisma.invite.findMany({
+      where: { inviteeId: userId, status: "PENDING" },
+      include: { list: true },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.invite.count({ where: { inviteeId: userId, status: "PENDING" } }),
+  ]);
+  return {
+    data: invites,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 };
