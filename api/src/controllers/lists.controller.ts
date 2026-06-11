@@ -38,7 +38,7 @@ export const createList = async (req: Request, res: Response) => {
 
 export const getLists = async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const lists = await listsService.getLists(req.userId!, page, limit);
     res.json(lists);
@@ -55,6 +55,18 @@ export const getList = async (req: Request, res: Response) => {
     );
     if (!list) return res.status(403).json({ error: "Forbidden" });
     res.json(list);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const getMembers = async (req: Request, res: Response) => {
+  try {
+    const members = await listsService.getMembers(
+      req.params.id as string,
+      req.userId!,
+    );
+    res.json(members);
   } catch (error) {
     handleError(error, res);
   }

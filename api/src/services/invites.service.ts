@@ -9,11 +9,11 @@ export const sendInvite = async (
   const user = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: inviterId, listId } },
   });
-  if (!user || user.role !== "OWNER") throw new Error("Authorization Error");
+  if (!user || user.role !== "OWNER") throw new Error("Forbidden");
   const invitee = await prisma.user.findUnique({
     where: { email: inviteeEmail },
   });
-  if (!invitee) throw new Error("User Error");
+  if (!invitee) throw new Error("Forbidden");
   const alreadyMember = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: invitee.id, listId } },
   });
@@ -39,8 +39,7 @@ export const respondToInvite = async (
   response: "ACCEPTED" | "REJECTED",
 ) => {
   const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
-  if (!invite || invite.inviteeId !== userId)
-    throw new Error("Authorization Error");
+  if (!invite || invite.inviteeId !== userId) throw new Error("Forbidden");
   if (invite.status !== "PENDING")
     throw new Error("Invite already responded to");
 

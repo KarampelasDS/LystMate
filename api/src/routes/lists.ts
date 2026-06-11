@@ -9,11 +9,12 @@ router.use(authenticate);
 router.post("/", listsController.createList);
 router.get("/", listsController.getLists);
 router.get("/:id", listsController.getList);
+router.get("/:id/members", listsController.getMembers);
 router.delete("/:id", listsController.deleteList);
 router.patch("/:id/rename", listsController.renameList);
 router.patch("/:id/visibility", listsController.changeListVisibility);
 router.delete("/:id/leave", listsController.leaveList);
-router.post("/:id/transfer", listsController.transferOwnership);
+router.patch("/:id/transfer", listsController.transferOwnership);
 router.delete("/:id/members/:memberId", listsController.removeMember);
 router.patch("/:id/members/:memberId", listsController.updateMember);
 

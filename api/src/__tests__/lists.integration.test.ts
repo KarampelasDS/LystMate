@@ -3,7 +3,6 @@ import app from "../app";
 import prisma from "../utils/prisma";
 import jwt from "jsonwebtoken";
 
-// Mock Prisma so no real DB is touched
 jest.mock("../utils/prisma", () => ({
   list: {
     create: jest.fn(),
@@ -16,11 +15,12 @@ jest.mock("../utils/prisma", () => ({
     findUnique: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
   },
   $transaction: jest.fn(),
 }));
 
-// Helper: make a valid JWT for a fake user
 const makeToken = (userId: string) =>
   jwt.sign({ userId }, process.env.JWT_SECRET || "dev_secret");
 
@@ -30,6 +30,8 @@ const AUTH = { Authorization: `Bearer ${TOKEN}` };
 const mockListMember = prisma.listMember.findUnique as jest.Mock;
 const mockListMemberFindMany = prisma.listMember.findMany as jest.Mock;
 const mockListMemberCount = prisma.listMember.count as jest.Mock;
+const mockListMemberUpdate = prisma.listMember.update as jest.Mock;
+const mockListMemberDelete = prisma.listMember.delete as jest.Mock;
 const mockListFindUnique = prisma.list.findUnique as jest.Mock;
 const mockTransaction = prisma.$transaction as jest.Mock;
 const mockListUpdate = prisma.list.update as jest.Mock;
@@ -56,10 +58,7 @@ describe("Lists API", () => {
     it("creates a list and returns 201", async () => {
       mockTransaction.mockResolvedValue({ id: "list-1", name: "My List", visibility: "PRIVATE" });
 
-      const res = await request(app)
-        .post("/lists")
-        .set(AUTH)
-        .send({ name: "My List" });
+      const res = await request(app).post("/lists").set(AUTH).send({ name: "My List" });
 
       expect(res.status).toBe(201);
       expect(res.body.name).toBe("My List");
@@ -115,27 +114,66 @@ describe("Lists API", () => {
       expect(res.status).toBe(200);
       expect(res.body.limit).toBe(100);
     });
+
+    it("clamps page to 1 when page is negative", async () => {
+      mockListMemberFindMany.mockResolvedValue([]);
+      mockListMemberCount.mockResolvedValue(0);
+
+      const res = await request(app).get("/lists?page=-5").set(AUTH);
+
+      expect(res.status).toBe(200);
+      expect(res.body.page).toBe(1);
+    });
   });
 
   // ─── GET /lists/:id ───────────────────────────────────────────────────────
 
   describe("GET /lists/:id", () => {
     it("returns 403 when user is not a member and list is private", async () => {
-      mockListFindUnique.mockResolvedValueOnce({ visibility: "PRIVATE" });
-      mockListMember.mockResolvedValue(null);
+      mockListFindUnique.mockResolvedValueOnce({
+        id: "list-1",
+        name: "My List",
+        visibility: "PRIVATE",
+        items: [],
+        members: [], // user-1 is not in here
+      });
 
       const res = await request(app).get("/lists/list-1").set(AUTH);
       expect(res.status).toBe(403);
     });
 
     it("returns the list when user is a member", async () => {
-      mockListFindUnique.mockResolvedValueOnce({ visibility: "PRIVATE" });
-      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "OWNER" });
-      mockListFindUnique.mockResolvedValueOnce({ id: "list-1", name: "My List", items: [] });
+      mockListFindUnique.mockResolvedValueOnce({
+        id: "list-1",
+        name: "My List",
+        visibility: "PRIVATE",
+        items: [],
+        members: [{ userId: "user-1", role: "OWNER" }],
+      });
 
       const res = await request(app).get("/lists/list-1").set(AUTH);
       expect(res.status).toBe(200);
       expect(res.body.name).toBe("My List");
+    });
+
+    it("returns 403 when list does not exist", async () => {
+      mockListFindUnique.mockResolvedValueOnce(null);
+
+      const res = await request(app).get("/lists/nonexistent").set(AUTH);
+      expect(res.status).toBe(403);
+    });
+
+    it("allows access to a public list for non-members", async () => {
+      mockListFindUnique.mockResolvedValueOnce({
+        id: "list-1",
+        name: "Public List",
+        visibility: "PUBLIC",
+        items: [],
+        members: [], // user-1 is not a member
+      });
+
+      const res = await request(app).get("/lists/list-1").set(AUTH);
+      expect(res.status).toBe(200);
     });
   });
 
@@ -186,6 +224,169 @@ describe("Lists API", () => {
         .send({ name: "New Name" });
       expect(res.status).toBe(200);
       expect(res.body.name).toBe("New Name");
+    });
+  });
+
+  // ─── PATCH /lists/:id/visibility ─────────────────────────────────────────
+
+  describe("PATCH /lists/:id/visibility", () => {
+    it("returns 400 when visibility is missing", async () => {
+      const res = await request(app).patch("/lists/list-1/visibility").set(AUTH).send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when visibility is invalid", async () => {
+      const res = await request(app)
+        .patch("/lists/list-1/visibility")
+        .set(AUTH)
+        .send({ visibility: "BANANA" });
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 403 when user is not the owner", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+
+      const res = await request(app)
+        .patch("/lists/list-1/visibility")
+        .set(AUTH)
+        .send({ visibility: "PUBLIC" });
+      expect(res.status).toBe(403);
+    });
+
+    it("updates visibility when user is the owner", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "OWNER" });
+      mockListUpdate.mockResolvedValue({ id: "list-1", visibility: "PUBLIC" });
+
+      const res = await request(app)
+        .patch("/lists/list-1/visibility")
+        .set(AUTH)
+        .send({ visibility: "PUBLIC" });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ─── DELETE /lists/:id/leave ──────────────────────────────────────────────
+
+  describe("DELETE /lists/:id/leave", () => {
+    it("returns 403 when user is not a member", async () => {
+      mockListMember.mockResolvedValue(null);
+
+      const res = await request(app).delete("/lists/list-1/leave").set(AUTH);
+      expect(res.status).toBe(403);
+    });
+
+    it("returns 400 when owner tries to leave with other members", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "OWNER" });
+      mockListMemberFindMany.mockResolvedValue([
+        { userId: "user-2", listId: "list-1", role: "MEMBER" },
+      ]);
+
+      const res = await request(app).delete("/lists/list-1/leave").set(AUTH);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("You must transfer ownership before leaving");
+    });
+
+    it("returns 204 when non-owner leaves", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+      mockListMemberDelete.mockResolvedValue({});
+
+      const res = await request(app).delete("/lists/list-1/leave").set(AUTH);
+      expect(res.status).toBe(204);
+    });
+  });
+
+  // ─── PATCH /lists/:id/transfer ────────────────────────────────────────────
+
+  describe("PATCH /lists/:id/transfer", () => {
+    it("returns 400 when newOwnerId is missing", async () => {
+      const res = await request(app).patch("/lists/list-1/transfer").set(AUTH).send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 403 when user is not the owner", async () => {
+      mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+
+      const res = await request(app)
+        .patch("/lists/list-1/transfer")
+        .set(AUTH)
+        .send({ newOwnerId: "user-2" });
+      expect(res.status).toBe(403);
+    });
+
+    it("transfers ownership when user is the owner", async () => {
+      mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" });
+      mockListMember.mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+      mockTransaction.mockResolvedValue({});
+
+      const res = await request(app)
+        .patch("/lists/list-1/transfer")
+        .set(AUTH)
+        .send({ newOwnerId: "user-2" });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ─── DELETE /lists/:id/members/:memberId ─────────────────────────────────
+
+  describe("DELETE /lists/:id/members/:memberId", () => {
+    it("returns 403 when user is not the owner", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+
+      const res = await request(app).delete("/lists/list-1/members/user-2").set(AUTH);
+      expect(res.status).toBe(403);
+    });
+
+    it("returns 204 when owner removes a member", async () => {
+      mockListMember
+        .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
+        .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+      mockListMemberDelete.mockResolvedValue({});
+
+      const res = await request(app).delete("/lists/list-1/members/user-2").set(AUTH);
+      expect(res.status).toBe(204);
+    });
+  });
+
+  // ─── PATCH /lists/:id/members/:memberId ──────────────────────────────────
+
+  describe("PATCH /lists/:id/members/:memberId", () => {
+    it("returns 400 when role is missing", async () => {
+      const res = await request(app)
+        .patch("/lists/list-1/members/user-2")
+        .set(AUTH)
+        .send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when role is invalid", async () => {
+      const res = await request(app)
+        .patch("/lists/list-1/members/user-2")
+        .set(AUTH)
+        .send({ role: "OWNER" });
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 403 when user is not the owner", async () => {
+      mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+
+      const res = await request(app)
+        .patch("/lists/list-1/members/user-2")
+        .set(AUTH)
+        .send({ role: "VIEWER" });
+      expect(res.status).toBe(403);
+    });
+
+    it("updates member role when user is the owner", async () => {
+      mockListMember
+        .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
+        .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+      mockListMemberUpdate.mockResolvedValue({ userId: "user-2", role: "VIEWER" });
+
+      const res = await request(app)
+        .patch("/lists/list-1/members/user-2")
+        .set(AUTH)
+        .send({ role: "VIEWER" });
+      expect(res.status).toBe(200);
     });
   });
 });

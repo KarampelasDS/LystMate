@@ -15,6 +15,7 @@ model User {
   lists     ListMember[]
   invitesSent     Invite[] @relation("InvitesSent")
   invitesReceived Invite[] @relation("InvitesReceived")
+  refreshTokens   RefreshToken[]
   createdAt DateTime     @default(now())
 }
 
@@ -82,4 +83,14 @@ enum InviteStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique  // hashed
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
