@@ -4,6 +4,7 @@ import authRoutes from "./routes/auth";
 import listsRoutes from "./routes/lists";
 import itemsRoutes from "./routes/items";
 import invitesRoutes from "./routes/invites";
+import usersRoutes from "./routes/users";
 import { globalLimiter } from "./middleware/rateLimit";
 import cookieParser from "cookie-parser";
 
@@ -18,6 +19,7 @@ app.use("/auth", authRoutes);
 app.use("/lists", listsRoutes);
 app.use("/lists/:listId/items", itemsRoutes);
 app.use("/invites", invitesRoutes);
+app.use("/users", usersRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
