@@ -10,12 +10,15 @@ datasource db {
 model User {
   id        String       @id @default(uuid())
   email     String       @unique
+  emailVerified Boolean     @default(false)
   password  String
   name      String
   lists     ListMember[]
   invitesSent     Invite[] @relation("InvitesSent")
   invitesReceived Invite[] @relation("InvitesReceived")
   refreshTokens   RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
   createdAt DateTime     @default(now())
 }
 
@@ -92,5 +95,23 @@ model RefreshToken {
   userId    String
   expiresAt DateTime
   revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique  // hashed
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique  // hashed
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
   createdAt DateTime @default(now())
 }

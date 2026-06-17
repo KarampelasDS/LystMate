@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import prisma from "../utils/prisma";
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+import { sendEmail } from "./email.service";
 
 export const register = async (
   name: string,
@@ -31,7 +32,29 @@ export const register = async (
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
+  const rawVerificationToken = crypto.randomBytes(32).toString("hex");
+  const hashedVerificationToken = crypto
+    .createHash("sha256")
+    .update(rawVerificationToken)
+    .digest("hex");
+  await prisma.emailVerificationToken.create({
+    data: {
+      token: hashedVerificationToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "15m" });
+  sendEmail(
+    email,
+    "Welcome to Our App",
+    `<p>Hi ${name}, welcome to our app!</p>
+    <p>Please verify your email by clicking the link below:</p>
+    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawVerificationToken}">Verify Email</a>
+    `,
+  ).catch((error) => {
+    console.error("Error sending welcome email:", error);
+  });
   return {
     rawRefreshToken,
     token,
@@ -101,4 +124,76 @@ export const logout = async (token: string) => {
     },
   });
   return { message: "Logged out successfully" };
+};
+
+export const verifyEmail = async (token: string) => {
+  const hashed = crypto.createHash("sha256").update(token).digest("hex");
+  const match = await prisma.emailVerificationToken.findUnique({
+    where: { token: hashed },
+  });
+  if (!match) throw new Error("Invalid or expired token");
+  if (match.expiresAt < new Date()) throw new Error("Invalid or expired token");
+  await prisma.user.update({
+    where: { id: match.userId },
+    data: { emailVerified: true },
+  });
+  await prisma.emailVerificationToken.delete({
+    where: { id: match.id },
+  });
+  return { message: "Email verified successfully" };
+};
+
+export const forgotPassword = async (email: string) => {
+  const match = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+  if (!match) return;
+  const rawPasswordResetToken = crypto.randomBytes(32).toString("hex");
+  const hashedPasswordResetToken = crypto
+    .createHash("sha256")
+    .update(rawPasswordResetToken)
+    .digest("hex");
+  await prisma.passwordResetToken.create({
+    data: {
+      token: hashedPasswordResetToken,
+      userId: match.id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+  sendEmail(
+    email,
+    "Reset Password",
+    `<p>Reset your password using the link below:</p>
+    <a href="${process.env.FRONTEND_URL}/reset-password?token=${rawPasswordResetToken}">Reset Password</a>
+    `,
+  ).catch((error) => {
+    console.error("Error sending welcome email:", error);
+  });
+};
+
+export const resetPassword = async (token: string, newPassword: string) => {
+  const hashedPasswordResetToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+  const match = await prisma.passwordResetToken.findUnique({
+    where: { token: hashedPasswordResetToken },
+  });
+  if (!match) return;
+  if (match.expiresAt < new Date()) throw new Error("Invalid or expired token");
+  const newPasswordHashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: {
+      id: match.userId,
+    },
+    data: { password: newPasswordHashed },
+  });
+  await prisma.passwordResetToken.delete({
+    where: {
+      id: match.id,
+    },
+  });
+  return { message: "Password reset successfully" };
 };

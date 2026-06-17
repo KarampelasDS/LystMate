@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
+import { error } from "console";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -64,6 +65,51 @@ export const logout = async (req: Request, res: Response) => {
     const refreshToken = req.cookies.refreshToken;
     const result = await authService.logout(refreshToken);
     res.clearCookie("refreshToken");
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+};
+
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const token = req.query.token as string;
+    if (!token) return res.status(400).json({ error: "Token is required" });
+    const result = await authService.verifyEmail(token);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+    const email = body.email;
+    if (!body || !email) throw new Error("Email is required");
+    await authService.forgotPassword(email);
+    res
+      .status(200)
+      .json({ message: "If that email exists, a reset link has been sent" });
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+    const token = body.token;
+    const newPassword = body.newPassword;
+    if (!body || !token || !newPassword)
+      throw new Error("Token and new password is required");
+    const result = await authService.resetPassword(token, newPassword);
     return res.status(200).json(result);
   } catch (err) {
     return res
