@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import prisma from "../utils/prisma";
 import { sendEmail } from "./email.service";
-import { error } from "console";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -72,6 +71,10 @@ export const login = async (email: string, password: string) => {
   if (!user) throw new Error("Invalid Credentials");
   const matches = await bcrypt.compare(password, user.password);
   if (!matches) throw new Error("Invalid Credentials");
+  if (!user.emailVerified) throw new Error("Email not verified");
+  await prisma.refreshToken.deleteMany({
+    where: { userId: user.id, expiresAt: { lt: new Date() } },
+  });
   const rawRefreshToken = crypto.randomBytes(32).toString("hex");
   const hashedRefreshToken = crypto
     .createHash("sha256")
@@ -217,5 +220,6 @@ export const resetPassword = async (token: string, newPassword: string) => {
       id: match.id,
     },
   });
+  await prisma.refreshToken.deleteMany({ where: { userId: match.userId } });
   return { message: "Password reset successfully" };
 };

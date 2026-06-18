@@ -1,14 +1,18 @@
 import { Request, Response } from "express";
 import * as listsService from "../services/lists.service";
 
+const SAFE_ERRORS = new Set([
+  "You must transfer ownership before leaving",
+  "Cannot remove yourself, use leave list",
+  "You are already the owner",
+  "Cannot change your own role",
+]);
+
 const handleError = (error: unknown, res: Response) => {
   if (error instanceof Error && error.message === "Forbidden") {
     return res.status(403).json({ error: "Forbidden" });
   }
-  if (
-    error instanceof Error &&
-    error.message === "You must transfer ownership before leaving"
-  ) {
+  if (error instanceof Error && SAFE_ERRORS.has(error.message)) {
     return res.status(400).json({ error: error.message });
   }
   return res.status(500).json({ error: "Internal server error" });

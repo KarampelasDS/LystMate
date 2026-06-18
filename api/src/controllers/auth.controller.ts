@@ -7,6 +7,7 @@ const SAFE_ERRORS = new Set([
   "Authorization Error",
   "Email is required",
   "Token and new password is required",
+  "Email not verified",
 ]);
 
 const handleError = (err: unknown, res: Response) => {
@@ -38,6 +39,11 @@ export const register = async (req: Request, res: Response) => {
       return res
         .status(400)
         .json({ error: "Password must be at least 8 characters" });
+    }
+    if (password.length > 128) {
+      return res
+        .status(400)
+        .json({ error: "Password must be 128 characters or less" });
     }
     const result = await authService.register(name, email, password);
     res.cookie("refreshToken", result.rawRefreshToken, {
@@ -75,6 +81,7 @@ export const login = async (req: Request, res: Response) => {
 export const refresh = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) return res.status(401).json({ error: "Authorization Error" });
     const result = await authService.refreshToken(refreshToken);
     res.cookie("refreshToken", result.refreshToken, {
       httpOnly: true,
@@ -91,6 +98,7 @@ export const refresh = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) return res.status(401).json({ error: "Authorization Error" });
     const result = await authService.logout(refreshToken);
     res.clearCookie("refreshToken");
     return res.status(200).json(result);
@@ -145,6 +153,11 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res
         .status(400)
         .json({ error: "Password must be at least 8 characters" });
+    }
+    if (newPassword.length > 128) {
+      return res
+        .status(400)
+        .json({ error: "Password must be 128 characters or less" });
     }
     const result = await authService.resetPassword(token, newPassword);
     return res.status(200).json(result);

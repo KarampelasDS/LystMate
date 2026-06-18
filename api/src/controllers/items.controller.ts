@@ -23,7 +23,7 @@ export const createItem = async (req: Request, res: Response) => {
       }
     }
     if (url && url.length > 2048) return res.status(400).json({ error: "URL must be 2048 characters or less" });
-    if (!Number.isInteger(quantity) || quantity < 1) return res.status(400).json({ error: "Quantity must be a positive integer" });
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999) return res.status(400).json({ error: "Quantity must be between 1 and 9999" });
     const item = await itemsService.createItem(
       listId,
       req.userId!,
@@ -65,7 +65,8 @@ export const updateItem = async (req: Request, res: Response) => {
       }
     }
     if (url && url.length > 2048) return res.status(400).json({ error: "URL must be 2048 characters or less" });
-    if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 1)) return res.status(400).json({ error: "Quantity must be a positive integer" });
+    if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999)) return res.status(400).json({ error: "Quantity must be between 1 and 9999" });
+    if (checked !== undefined && typeof checked !== "boolean") return res.status(400).json({ error: "Checked must be a boolean" });
     const item = await itemsService.updateItem(
       listId,
       itemId,
