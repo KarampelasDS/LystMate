@@ -18,7 +18,10 @@ export const register = async (
   password: string,
 ) => {
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) throw new Error("Invalid Credentials");
+  if (existing) {
+    if (existing.emailVerified) throw new Error("Invalid Credentials");
+    await prisma.user.delete({ where: { id: existing.id } });
+  }
   const hashed = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: {
@@ -54,11 +57,12 @@ export const register = async (
   };
 };
 
+const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
 export const login = async (email: string, password: string) => {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new Error("Invalid Credentials");
-  const matches = await bcrypt.compare(password, user.password);
-  if (!matches) throw new Error("Invalid Credentials");
+  const matches = await bcrypt.compare(password, user?.password ?? DUMMY_HASH);
+  if (!user || !matches) throw new Error("Invalid Credentials");
   if (!user.emailVerified) throw new Error("Email not verified");
   await prisma.refreshToken.deleteMany({
     where: { userId: user.id, expiresAt: { lt: new Date() } },
@@ -201,6 +205,27 @@ export const requestEmailChange = async (userId: string, newEmail: string) => {
     `<p>A request was made to change the email address on your account to ${escapeHtml(newEmail)}.</p>
     <p>If this was not you, please contact support immediately.</p>`,
   ).catch((error) => console.error("Error sending security alert:", error));
+};
+
+export const resendVerification = async (email: string) => {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || user.emailVerified) return;
+  await prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } });
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+  await prisma.emailVerificationToken.create({
+    data: {
+      token: hashedToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+  sendEmail(
+    email,
+    "Verify your email address",
+    `<p>Click the link below to verify your email address:</p>
+    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawToken}">Verify Email</a>`,
+  ).catch((error) => console.error("Error sending verification email:", error));
 };
 
 export const forgotPassword = async (email: string) => {

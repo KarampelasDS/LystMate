@@ -11,6 +11,7 @@ router.post("/refresh", authLimiter, authController.refresh);
 router.post("/logout", authLimiter, authController.logout);
 router.delete("/sessions", authenticate, authController.logoutAll);
 router.get("/verify-email", authLimiter, authController.verifyEmail);
+router.post("/resend-verification", authLimiter, authController.resendVerification);
 router.post("/forgot-password", authLimiter, authController.forgotPassword);
 router.post("/reset-password", authLimiter, authController.resetPassword);
 

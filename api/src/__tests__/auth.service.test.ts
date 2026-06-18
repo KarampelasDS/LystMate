@@ -51,10 +51,11 @@ describe("auth.service", () => {
       expect(result).not.toHaveProperty("rawRefreshToken");
     });
 
-    it("throws when email is already taken", async () => {
+    it("throws when email is already taken by a verified account", async () => {
       mockFindUnique.mockResolvedValue({
         id: "user-1",
         email: "alice@example.com",
+        emailVerified: true,
       });
 
       await expect(

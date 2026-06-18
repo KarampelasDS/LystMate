@@ -118,6 +118,19 @@ export const verifyEmail = async (req: Request, res: Response) => {
   }
 };
 
+export const resendVerification = async (req: Request, res: Response) => {
+  try {
+    const email = req.body?.email;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+      return res.status(400).json({ error: "Invalid email format" });
+    await authService.resendVerification(email);
+    return res.status(200).json({ message: "If that email exists and is unverified, a new link has been sent" });
+  } catch (err) {
+    return handleError(err, res);
+  }
+};
+
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const body = req.body;
@@ -155,6 +168,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     const newPassword = body.newPassword;
     if (!body || !token || !newPassword)
       throw new Error("Token and new password is required");
+    if (token.length > 128)
+      return res.status(400).json({ error: "Invalid or expired token" });
     if (newPassword.length < 8) {
       return res
         .status(400)

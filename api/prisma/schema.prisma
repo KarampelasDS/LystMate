@@ -96,6 +96,8 @@ model RefreshToken {
   expiresAt DateTime
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model EmailVerificationToken {
@@ -106,6 +108,8 @@ model EmailVerificationToken {
   pendingEmail String?
   expiresAt    DateTime
   createdAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 model PasswordResetToken {
@@ -115,4 +119,6 @@ model PasswordResetToken {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }

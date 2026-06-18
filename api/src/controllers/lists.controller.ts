@@ -45,7 +45,7 @@ export const createList = async (req: Request, res: Response) => {
 
 export const getLists = async (req: Request, res: Response) => {
   try {
-    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const page = Math.min(Math.max(parseInt(req.query.page as string) || 1, 1), 10000);
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const lists = await listsService.getLists(req.userId!, page, limit);
     res.json(lists);
@@ -69,7 +69,7 @@ export const getList = async (req: Request, res: Response) => {
 
 export const getMembers = async (req: Request, res: Response) => {
   try {
-    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const page = Math.min(Math.max(parseInt(req.query.page as string) || 1, 1), 10000);
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const members = await listsService.getMembers(
       req.params.id as string,

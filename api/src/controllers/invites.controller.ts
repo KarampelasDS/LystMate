@@ -79,7 +79,7 @@ export const cancelInvite = async (req: Request, res: Response) => {
 
 export const getInvites = async (req: Request, res: Response) => {
   try {
-    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const page = Math.min(Math.max(parseInt(req.query.page as string) || 1, 1), 10000);
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const result = await invitesService.getInvites(req.userId!, page, limit);
     res.status(200).json(result);
