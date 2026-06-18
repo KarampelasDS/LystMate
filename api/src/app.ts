@@ -7,11 +7,19 @@ import invitesRoutes from "./routes/invites";
 import usersRoutes from "./routes/users";
 import { globalLimiter } from "./middleware/rateLimit";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+  }),
+);
+app.use(helmet());
+app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(globalLimiter);
 
@@ -26,6 +34,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err);
   res.status(500).json({ error: "Internal server error" });
 });
 

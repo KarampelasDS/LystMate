@@ -11,7 +11,8 @@ export const authenticate = async (
     return res.status(401).json({ error: "Authorization Error" });
   }
   const token = authHeader.split(" ")[1];
-  const secret = process.env.JWT_SECRET || "dev_secret";
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return res.status(500).json({ error: "Server configuration error" });
   try {
     const decoded = jwt.verify(token, secret) as { userId: string };
     req.userId = decoded.userId;

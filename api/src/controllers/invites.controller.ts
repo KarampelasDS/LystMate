@@ -9,7 +9,8 @@ const handleError = (error: unknown, res: Response) => {
     error instanceof Error &&
     (error.message === "Invite already sent" ||
       error.message === "Invite already responded to" ||
-      error.message === "User is already a member of this list")
+      error.message === "User is already a member of this list" ||
+      error.message === "Invite could not be sent")
   ) {
     return res.status(400).json({ error: error.message });
   }

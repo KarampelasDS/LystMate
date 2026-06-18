@@ -20,6 +20,9 @@ export const createList = async (req: Request, res: Response) => {
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
     }
+    if (name.length > 100) {
+      return res.status(400).json({ error: "Name must be 100 characters or less" });
+    }
     if (visibility !== "PUBLIC" && visibility !== "PRIVATE") {
       return res
         .status(400)
@@ -86,6 +89,9 @@ export const renameList = async (req: Request, res: Response) => {
     const { name } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
+    }
+    if (name.length > 100) {
+      return res.status(400).json({ error: "Name must be 100 characters or less" });
     }
     const updatedList = await listsService.renameList(
       req.params.id as string,

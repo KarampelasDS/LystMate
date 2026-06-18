@@ -2,8 +2,13 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import prisma from "../utils/prisma";
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 import { sendEmail } from "./email.service";
+import { error } from "console";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error("JWT_SECRET must be set and at least 32 characters long");
+}
 
 export const register = async (
   name: string,
@@ -100,13 +105,25 @@ export const refreshToken = async (token: string) => {
       id: match.id,
     },
     data: {
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      revoked: true,
     },
   });
   const newToken = jwt.sign({ userId: match.userId }, JWT_SECRET, {
     expiresIn: "15m",
   });
-  return { token: newToken };
+  const rawRefreshToken = crypto.randomBytes(32).toString("hex");
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(rawRefreshToken)
+    .digest("hex");
+  await prisma.refreshToken.create({
+    data: {
+      token: hashedRefreshToken,
+      userId: match.userId,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+  return { token: newToken, refreshToken: rawRefreshToken };
 };
 
 export const logout = async (token: string) => {
@@ -124,6 +141,11 @@ export const logout = async (token: string) => {
     },
   });
   return { message: "Logged out successfully" };
+};
+
+export const revokeAllSessions = async (userId: string) => {
+  await prisma.refreshToken.deleteMany({ where: { userId } });
+  return { message: "All sessions revoked" };
 };
 
 export const verifyEmail = async (token: string) => {
@@ -181,7 +203,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
   const match = await prisma.passwordResetToken.findUnique({
     where: { token: hashedPasswordResetToken },
   });
-  if (!match) return;
+  if (!match) throw new Error("Invalid or expired token");
   if (match.expiresAt < new Date()) throw new Error("Invalid or expired token");
   const newPasswordHashed = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({

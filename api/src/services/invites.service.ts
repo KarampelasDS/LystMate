@@ -13,7 +13,7 @@ export const sendInvite = async (
   const invitee = await prisma.user.findUnique({
     where: { email: inviteeEmail },
   });
-  if (!invitee) throw new Error("Forbidden");
+  if (!invitee) throw new Error("Invite could not be sent");
   const alreadyMember = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: invitee.id, listId } },
   });

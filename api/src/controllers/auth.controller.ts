@@ -1,6 +1,21 @@
 import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
-import { error } from "console";
+
+const SAFE_ERRORS = new Set([
+  "Invalid Credentials",
+  "Invalid or expired token",
+  "Authorization Error",
+  "Email is required",
+  "Token and new password is required",
+]);
+
+const handleError = (err: unknown, res: Response) => {
+  const message = err instanceof Error ? err.message : null;
+  if (message && SAFE_ERRORS.has(message)) {
+    return res.status(400).json({ error: message });
+  }
+  return res.status(500).json({ error: "Internal server error" });
+};
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -11,6 +26,19 @@ export const register = async (req: Request, res: Response) => {
         .json({ error: "Name, email and password are required" });
     }
     const { name, email, password } = req.body;
+    if (name.length > 100) {
+      return res
+        .status(400)
+        .json({ error: "Name must be 100 characters or less" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters" });
+    }
     const result = await authService.register(name, email, password);
     res.cookie("refreshToken", result.rawRefreshToken, {
       httpOnly: true,
@@ -20,9 +48,7 @@ export const register = async (req: Request, res: Response) => {
     });
     res.status(201).json({ token: result.token, user: result.user });
   } catch (err) {
-    res
-      .status(400)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    handleError(err, res);
   }
 };
 
@@ -42,9 +68,7 @@ export const login = async (req: Request, res: Response) => {
     });
     res.status(200).json({ token: result.token, user: result.user });
   } catch (err) {
-    res
-      .status(400)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    handleError(err, res);
   }
 };
 
@@ -52,11 +76,15 @@ export const refresh = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     const result = await authService.refreshToken(refreshToken);
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
     return res.status(200).json({ token: result.token });
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    return handleError(err, res);
   }
 };
 
@@ -67,9 +95,7 @@ export const logout = async (req: Request, res: Response) => {
     res.clearCookie("refreshToken");
     return res.status(200).json(result);
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    return handleError(err, res);
   }
 };
 
@@ -80,9 +106,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     const result = await authService.verifyEmail(token);
     return res.status(200).json(result);
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    return handleError(err, res);
   }
 };
 
@@ -96,9 +120,17 @@ export const forgotPassword = async (req: Request, res: Response) => {
       .status(200)
       .json({ message: "If that email exists, a reset link has been sent" });
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    return handleError(err, res);
+  }
+};
+
+export const logoutAll = async (req: Request, res: Response) => {
+  try {
+    const result = await authService.revokeAllSessions(req.userId!);
+    res.clearCookie("refreshToken");
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleError(err, res);
   }
 };
 
@@ -109,11 +141,14 @@ export const resetPassword = async (req: Request, res: Response) => {
     const newPassword = body.newPassword;
     if (!body || !token || !newPassword)
       throw new Error("Token and new password is required");
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters" });
+    }
     const result = await authService.resetPassword(token, newPassword);
     return res.status(200).json(result);
   } catch (err) {
-    return res
-      .status(401)
-      .json({ error: err instanceof Error ? err.message : "Unknown error" });
+    return handleError(err, res);
   }
 };

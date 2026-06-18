@@ -165,16 +165,16 @@ export const transferOwnership = async (
   newOwnerId: string,
   requesterId: string,
 ) => {
-  const requester = await prisma.listMember.findUnique({
-    where: { userId_listId: { userId: requesterId, listId } },
-  });
-  if (!requester || requester.role !== "OWNER") throw new Error("Forbidden");
-  if (newOwnerId === requesterId) throw new Error("You are already the owner");
-  const target = await prisma.listMember.findUnique({
-    where: { userId_listId: { userId: newOwnerId, listId } },
-  });
-  if (!target) throw new Error("Forbidden");
   await prisma.$transaction(async (tx) => {
+    const requester = await tx.listMember.findUnique({
+      where: { userId_listId: { userId: requesterId, listId } },
+    });
+    if (!requester || requester.role !== "OWNER") throw new Error("Forbidden");
+    if (newOwnerId === requesterId) throw new Error("You are already the owner");
+    const target = await tx.listMember.findUnique({
+      where: { userId_listId: { userId: newOwnerId, listId } },
+    });
+    if (!target) throw new Error("Forbidden");
     await tx.listMember.update({
       where: { userId_listId: { userId: requesterId, listId } },
       data: { role: "MEMBER" },
