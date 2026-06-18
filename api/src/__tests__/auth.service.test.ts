@@ -6,7 +6,16 @@ jest.mock("../services/email.service", () => ({
   sendEmail: jest.fn().mockResolvedValue({}),
 }));
 
+const mockTx = {
+  user: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+  },
+};
+
 jest.mock("../utils/prisma", () => ({
+  $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(mockTx)),
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
@@ -16,6 +25,7 @@ jest.mock("../utils/prisma", () => ({
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     deleteMany: jest.fn(),
   },
   emailVerificationToken: {
@@ -28,6 +38,7 @@ const mockCreate = prisma.user.create as jest.Mock;
 const mockRefreshTokenFindUnique = prisma.refreshToken.findUnique as jest.Mock;
 const mockRefreshTokenFindMany = prisma.refreshToken.findMany as jest.Mock;
 const mockRefreshTokenUpdate = prisma.refreshToken.update as jest.Mock;
+const mockRefreshTokenUpdateMany = prisma.refreshToken.updateMany as jest.Mock;
 const mockRefreshTokenDeleteMany = prisma.refreshToken.deleteMany as jest.Mock;
 
 describe("auth.service", () => {
@@ -35,8 +46,8 @@ describe("auth.service", () => {
 
   describe("register", () => {
     it("creates a user and returns user data without tokens", async () => {
-      mockFindUnique.mockResolvedValue(null);
-      mockCreate.mockResolvedValue({
+      mockTx.user.findUnique.mockResolvedValue(null);
+      mockTx.user.create.mockResolvedValue({
         id: "user-1",
         name: "Alice",
         email: "alice@example.com",
@@ -52,7 +63,7 @@ describe("auth.service", () => {
     });
 
     it("throws when email is already taken by a verified account", async () => {
-      mockFindUnique.mockResolvedValue({
+      mockTx.user.findUnique.mockResolvedValue({
         id: "user-1",
         email: "alice@example.com",
         emailVerified: true,
@@ -133,14 +144,14 @@ describe("auth.service", () => {
         revoked: false,
         expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       });
-      mockRefreshTokenUpdate.mockResolvedValue({});
+      mockRefreshTokenUpdateMany.mockResolvedValue({ count: 1 });
 
       const result = await refreshToken("raw-token");
 
       expect(result.token).toBeDefined();
-      expect(mockRefreshTokenUpdate).toHaveBeenCalledWith(
+      expect(mockRefreshTokenUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "rt-1" },
+          where: { id: "rt-1", revoked: false },
           data: { revoked: true },
         }),
       );

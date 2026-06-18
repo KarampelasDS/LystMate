@@ -40,7 +40,7 @@ export const createItem = async (req: Request, res: Response) => {
 export const getItems = async (req: Request, res: Response) => {
   try {
     const { listId } = req.params as Record<string, string>;
-    const page = Math.min(Math.max(parseInt(req.query.page as string) || 1, 1), 10000);
+    const page = Math.min(Math.max(parseInt(req.query.page as string) || 1, 1), 1000);
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const items = await itemsService.getItems(listId, req.userId!, page, limit);
     res.status(200).json(items);

@@ -17,18 +17,20 @@ export const register = async (
   email: string,
   password: string,
 ) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    if (existing.emailVerified) throw new Error("Invalid Credentials");
-    await prisma.user.delete({ where: { id: existing.id } });
-  }
   const hashed = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashed,
-    },
+  const user = await prisma.$transaction(async (tx) => {
+    const existing = await tx.user.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.emailVerified) throw new Error("Invalid Credentials");
+      try {
+        await tx.user.delete({ where: { id: existing.id } });
+      } catch {
+        // concurrent re-registration already deleted the record; proceed
+      }
+    }
+    return tx.user.create({
+      data: { name, email, password: hashed },
+    });
   });
   const rawVerificationToken = crypto.randomBytes(32).toString("hex");
   const hashedVerificationToken = crypto
@@ -108,14 +110,11 @@ export const refreshToken = async (token: string) => {
     throw new Error("Authorization Error");
   }
   if (match.expiresAt < new Date()) throw new Error("Authorization Error");
-  await prisma.refreshToken.update({
-    where: {
-      id: match.id,
-    },
-    data: {
-      revoked: true,
-    },
+  const revoked = await prisma.refreshToken.updateMany({
+    where: { id: match.id, revoked: false },
+    data: { revoked: true },
   });
+  if (revoked.count === 0) throw new Error("Authorization Error");
   const newToken = jwt.sign({ userId: match.userId }, JWT_SECRET, {
     expiresIn: "15m",
   });
@@ -179,7 +178,7 @@ export const verifyEmail = async (token: string) => {
 
 export const requestEmailChange = async (userId: string, newEmail: string) => {
   const existing = await prisma.user.findUnique({ where: { email: newEmail } });
-  if (existing && existing.id !== userId) throw new Error("Email already in use");
+  if (existing && existing.id !== userId) return;
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("Authorization Error");
   await prisma.emailVerificationToken.deleteMany({ where: { userId } });

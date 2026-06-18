@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as userService from "../services/users.service";
 import * as authService from "../services/auth.service";
 
-const SAFE_ERRORS = new Set(["No data to update", "Email already in use"]);
+const SAFE_ERRORS = new Set(["No data to update"]);
 
 const handleError = (err: unknown, res: Response) => {
   const message = err instanceof Error ? err.message : null;
