@@ -56,12 +56,7 @@ export const getList = async (id: string, userId: string) => {
   if (!list) return null;
   if (!membership && list.visibility !== "PUBLIC") throw new Error("Forbidden");
   if (!membership) return list;
-  const members = await prisma.listMember.findMany({
-    where: { listId: id },
-    select: { userId: true, role: true },
-    take: 100,
-  });
-  return { ...list, members };
+  return list;
 };
 
 //Get List Members
@@ -78,7 +73,7 @@ export const getMembers = async (
   const [members, total] = await Promise.all([
     prisma.listMember.findMany({
       where: { listId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true } } },
       skip: (page - 1) * limit,
       take: limit,
     }),

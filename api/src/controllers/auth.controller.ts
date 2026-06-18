@@ -4,7 +4,6 @@ import * as authService from "../services/auth.service";
 const SAFE_ERRORS = new Set([
   "Invalid Credentials",
   "Invalid or expired token",
-  "Authorization Error",
   "Email is required",
   "Token and new password is required",
   "Email not verified",
@@ -12,6 +11,9 @@ const SAFE_ERRORS = new Set([
 
 const handleError = (err: unknown, res: Response) => {
   const message = err instanceof Error ? err.message : null;
+  if (message === "Authorization Error") {
+    return res.status(401).json({ error: message });
+  }
   if (message && SAFE_ERRORS.has(message)) {
     return res.status(400).json({ error: message });
   }
@@ -108,7 +110,7 @@ export const logout = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   try {
     const token = req.query.token as string;
-    if (!token) return res.status(400).json({ error: "Token is required" });
+    if (!token || token.length > 128) return res.status(400).json({ error: "Token is required" });
     const result = await authService.verifyEmail(token);
     return res.status(200).json(result);
   } catch (err) {
@@ -121,6 +123,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const body = req.body;
     const email = body.email;
     if (!body || !email) throw new Error("Email is required");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+      return res.status(400).json({ error: "Invalid email format" });
     await authService.forgotPassword(email);
     res
       .status(200)

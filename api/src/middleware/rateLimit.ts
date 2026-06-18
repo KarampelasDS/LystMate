@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { Request } from "express";
 
 export const globalLimiter = rateLimit({
@@ -17,10 +17,19 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const userLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  keyGenerator: (req: Request) => req.userId ?? ipKeyGenerator(req.ip ?? "unknown"),
+  message: { error: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export const inviteLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 invites per minute per user
-  keyGenerator: (req: Request) => req.userId ?? req.ip ?? "unknown",
+  keyGenerator: (req: Request) => req.userId ?? ipKeyGenerator(req.ip ?? "unknown"),
   message: { error: "Too many invites sent, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,

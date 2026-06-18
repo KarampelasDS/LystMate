@@ -63,6 +63,16 @@ export const login = async (email: string, password: string) => {
   await prisma.refreshToken.deleteMany({
     where: { userId: user.id, expiresAt: { lt: new Date() } },
   });
+  const activeSessions = await prisma.refreshToken.findMany({
+    where: { userId: user.id, revoked: false },
+    orderBy: { createdAt: "asc" },
+  });
+  if (activeSessions.length >= 10) {
+    const toDelete = activeSessions.slice(0, activeSessions.length - 9);
+    await prisma.refreshToken.deleteMany({
+      where: { id: { in: toDelete.map((s) => s.id) } },
+    });
+  }
   const rawRefreshToken = crypto.randomBytes(32).toString("hex");
   const hashedRefreshToken = crypto
     .createHash("sha256")
@@ -126,6 +136,7 @@ export const logout = async (token: string) => {
     where: { token: hashed },
   });
   if (!match) throw new Error("Authorization Error");
+  if (match.revoked) throw new Error("Authorization Error");
   await prisma.refreshToken.update({
     where: {
       id: match.id,
