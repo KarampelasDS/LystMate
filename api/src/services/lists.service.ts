@@ -47,33 +47,43 @@ export const getLists = async (userId: string, page: number, limit: number) => {
 
 //Get List Details
 export const getList = async (id: string, userId: string) => {
-  const list = await prisma.list.findUnique({
-    where: { id },
-    include: {
-      members: { take: 100 },
-    },
-  });
+  const [list, membership] = await Promise.all([
+    prisma.list.findUnique({ where: { id } }),
+    prisma.listMember.findUnique({
+      where: { userId_listId: { userId, listId: id } },
+    }),
+  ]);
   if (!list) return null;
-  const isMember = list.members.some((m) => m.userId === userId);
-  if (!isMember && list.visibility !== "PUBLIC") throw new Error("Forbidden");
-  if (!isMember) {
-    const { members: _members, ...publicList } = list;
-    return publicList;
-  }
-  return list;
+  if (!membership && list.visibility !== "PUBLIC") throw new Error("Forbidden");
+  if (!membership) return list;
+  const members = await prisma.listMember.findMany({
+    where: { listId: id },
+    take: 100,
+  });
+  return { ...list, members };
 };
 
 //Get List Members
-export const getMembers = async (listId: string, userId: string) => {
+export const getMembers = async (
+  listId: string,
+  userId: string,
+  page: number,
+  limit: number,
+) => {
   const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId, listId } },
   });
   if (!member) throw new Error("Forbidden");
-  const members = await prisma.listMember.findMany({
-    where: { listId },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
-  return members;
+  const [members, total] = await Promise.all([
+    prisma.listMember.findMany({
+      where: { listId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.listMember.count({ where: { listId } }),
+  ]);
+  return { data: members, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 
 //Delete List

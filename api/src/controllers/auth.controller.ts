@@ -46,13 +46,7 @@ export const register = async (req: Request, res: Response) => {
         .json({ error: "Password must be 128 characters or less" });
     }
     const result = await authService.register(name, email, password);
-    res.cookie("refreshToken", result.rawRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-    res.status(201).json({ token: result.token, user: result.user });
+    res.status(201).json({ message: "Registration successful. Please check your email to verify your account.", user: result.user });
   } catch (err) {
     handleError(err, res);
   }

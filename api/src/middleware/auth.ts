@@ -17,7 +17,7 @@ export const authenticate = async (
   const secret = process.env.JWT_SECRET;
   if (!secret) return res.status(500).json({ error: "Server configuration error" });
   try {
-    const decoded = jwt.verify(token, secret) as { userId: string };
+    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] }) as { userId: string };
     req.userId = decoded.userId;
     next();
   } catch (err) {

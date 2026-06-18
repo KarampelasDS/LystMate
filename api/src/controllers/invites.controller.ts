@@ -25,6 +25,9 @@ export const sendInvite = async (req: Request, res: Response) => {
         error: "List ID and invitee email are required",
       });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteeEmail) || inviteeEmail.length > 254) {
+      return res.status(400).json({ error: "Invalid email" });
+    }
     if (role !== "VIEWER" && role !== "MEMBER") {
       return res.status(400).json({ error: "Role must be VIEWER or MEMBER" });
     }

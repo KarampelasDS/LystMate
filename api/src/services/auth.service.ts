@@ -24,18 +24,6 @@ export const register = async (
       password: hashed,
     },
   });
-  const rawRefreshToken = crypto.randomBytes(32).toString("hex");
-  const hashedRefreshToken = crypto
-    .createHash("sha256")
-    .update(rawRefreshToken)
-    .digest("hex");
-  await prisma.refreshToken.create({
-    data: {
-      token: hashedRefreshToken,
-      userId: user.id,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-  });
   const rawVerificationToken = crypto.randomBytes(32).toString("hex");
   const hashedVerificationToken = crypto
     .createHash("sha256")
@@ -48,7 +36,6 @@ export const register = async (
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
   });
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "15m" });
   sendEmail(
     email,
     "Welcome to Our App",
@@ -60,8 +47,6 @@ export const register = async (
     console.error("Error sending welcome email:", error);
   });
   return {
-    rawRefreshToken,
-    token,
     user: { id: user.id, name: user.name, email: user.email },
   };
 };
@@ -175,6 +160,7 @@ export const forgotPassword = async (email: string) => {
     },
   });
   if (!match) return;
+  await prisma.passwordResetToken.deleteMany({ where: { userId: match.id } });
   const rawPasswordResetToken = crypto.randomBytes(32).toString("hex");
   const hashedPasswordResetToken = crypto
     .createHash("sha256")

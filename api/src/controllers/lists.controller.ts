@@ -69,9 +69,13 @@ export const getList = async (req: Request, res: Response) => {
 
 export const getMembers = async (req: Request, res: Response) => {
   try {
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const members = await listsService.getMembers(
       req.params.id as string,
       req.userId!,
+      page,
+      limit,
     );
     res.json(members);
   } catch (error) {
