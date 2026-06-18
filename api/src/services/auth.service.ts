@@ -4,6 +4,9 @@ import crypto from "crypto";
 import prisma from "../utils/prisma";
 import { sendEmail } from "./email.service";
 
+const escapeHtml = (str: string) =>
+  str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("JWT_SECRET must be set and at least 32 characters long");
@@ -39,7 +42,7 @@ export const register = async (
   sendEmail(
     email,
     "Welcome to Our App",
-    `<p>Hi ${name}, welcome to our app!</p>
+    `<p>Hi ${escapeHtml(name)}, welcome to our app!</p>
     <p>Please verify your email by clicking the link below:</p>
     <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawVerificationToken}">Verify Email</a>
     `,
@@ -86,7 +89,10 @@ export const refreshToken = async (token: string) => {
     where: { token: hashed },
   });
   if (!match) throw new Error("Authorization Error");
-  if (match.revoked) throw new Error("Authorization Error");
+  if (match.revoked) {
+    await prisma.refreshToken.deleteMany({ where: { userId: match.userId } });
+    throw new Error("Authorization Error");
+  }
   if (match.expiresAt < new Date()) throw new Error("Authorization Error");
   await prisma.refreshToken.update({
     where: {
@@ -145,12 +151,45 @@ export const verifyEmail = async (token: string) => {
   if (match.expiresAt < new Date()) throw new Error("Invalid or expired token");
   await prisma.user.update({
     where: { id: match.userId },
-    data: { emailVerified: true },
+    data: {
+      emailVerified: true,
+      ...(match.pendingEmail ? { email: match.pendingEmail } : {}),
+    },
   });
   await prisma.emailVerificationToken.delete({
     where: { id: match.id },
   });
   return { message: "Email verified successfully" };
+};
+
+export const requestEmailChange = async (userId: string, newEmail: string) => {
+  const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (existing && existing.id !== userId) throw new Error("Email already in use");
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("Authorization Error");
+  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+  await prisma.emailVerificationToken.create({
+    data: {
+      token: hashedToken,
+      userId,
+      pendingEmail: newEmail,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+  sendEmail(
+    newEmail,
+    "Verify your new email address",
+    `<p>Click the link below to verify your new email address:</p>
+    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawToken}">Verify Email</a>`,
+  ).catch((error) => console.error("Error sending email change verification:", error));
+  sendEmail(
+    user.email,
+    "Security alert: email change requested",
+    `<p>A request was made to change the email address on your account to ${escapeHtml(newEmail)}.</p>
+    <p>If this was not you, please contact support immediately.</p>`,
+  ).catch((error) => console.error("Error sending security alert:", error));
 };
 
 export const forgotPassword = async (email: string) => {

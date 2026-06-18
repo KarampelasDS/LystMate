@@ -58,6 +58,7 @@ export const getList = async (id: string, userId: string) => {
   if (!membership) return list;
   const members = await prisma.listMember.findMany({
     where: { listId: id },
+    select: { userId: true, role: true },
     take: 100,
   });
   return { ...list, members };

@@ -32,7 +32,7 @@ export const register = async (req: Request, res: Response) => {
         .status(400)
         .json({ error: "Name must be 100 characters or less" });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
       return res.status(400).json({ error: "Invalid email format" });
     }
     if (password.length < 8) {
@@ -94,7 +94,11 @@ export const logout = async (req: Request, res: Response) => {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) return res.status(401).json({ error: "Authorization Error" });
     const result = await authService.logout(refreshToken);
-    res.clearCookie("refreshToken");
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
     return res.status(200).json(result);
   } catch (err) {
     return handleError(err, res);
@@ -129,7 +133,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
 export const logoutAll = async (req: Request, res: Response) => {
   try {
     const result = await authService.revokeAllSessions(req.userId!);
-    res.clearCookie("refreshToken");
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
     return res.status(200).json(result);
   } catch (err) {
     return handleError(err, res);

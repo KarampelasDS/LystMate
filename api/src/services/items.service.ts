@@ -59,7 +59,7 @@ export const updateItem = async (
   itemId: string,
   userId: string,
   name?: string,
-  url?: string,
+  url?: string | null,
   quantity?: number,
   checked?: boolean,
 ) => {

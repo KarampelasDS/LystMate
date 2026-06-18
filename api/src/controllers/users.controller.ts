@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as userService from "../services/users.service";
+import * as authService from "../services/auth.service";
 
 const SAFE_ERRORS = new Set(["Email already in use", "No data to update"]);
 
@@ -14,17 +15,32 @@ const handleError = (err: unknown, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
-    const { name, email } = req.body;
-    if (name && name.length > 100) {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "No data to update" });
+    }
+    if (name.length > 100) {
       return res.status(400).json({ error: "Name must be 100 characters or less" });
     }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const result = await userService.updateUser(userId as string, name);
+    res.status(200).json({ message: "User updated successfully", user: result });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+export const requestEmailChange = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
       return res.status(400).json({ error: "Invalid email format" });
     }
-    const result = await userService.updateUser(userId as string, name, email);
-    res
-      .status(200)
-      .json({ message: "User updated successfully", user: result });
+    await authService.requestEmailChange(userId as string, email);
+    res.status(200).json({ message: "Verification email sent to your new address" });
   } catch (err) {
     handleError(err, res);
   }

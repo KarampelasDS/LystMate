@@ -7,5 +7,6 @@ const router = Router();
 router.use(authenticate);
 
 router.patch("/me", authLimiter, usersController.updateUser);
+router.post("/me/email", authLimiter, usersController.requestEmailChange);
 
 export default router;
