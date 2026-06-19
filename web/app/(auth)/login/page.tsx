@@ -1,0 +1,77 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/contexts/auth-context";
+
+export default function LoginPage() {
+  const { login } = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, password);
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <h1 className="font-serif text-4xl text-center mb-2 text-espresso">LystMate</h1>
+        <p className="text-center text-warm-brown text-sm mb-8">your shared lists, simplified</p>
+
+        <div className="bg-warm-white rounded-3xl border border-warm-border p-8 shadow-sm">
+          <h2 className="font-serif text-xl mb-6">Sign in</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-warm-brown mb-1.5 uppercase tracking-wide">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full border border-warm-border rounded-xl px-4 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-warm-brown mb-1.5 uppercase tracking-wide">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full border border-warm-border rounded-xl px-4 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
+              />
+            </div>
+            {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-espresso text-warm-white rounded-xl py-2.5 text-sm font-medium hover:bg-espresso-light transition-colors disabled:opacity-50 mt-2"
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+          <div className="mt-5 pt-5 border-t border-warm-border text-sm text-warm-brown space-y-2">
+            <p><Link href="/forgot-password" className="hover:text-espresso transition-colors">Forgot your password?</Link></p>
+            <p>No account? <Link href="/register" className="text-espresso hover:underline">Register</Link></p>
+            <p>Need to verify? <Link href="/resend-verification" className="text-espresso hover:underline">Resend email</Link></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
