@@ -60,6 +60,7 @@ export const changePassword = async (req: Request, res: Response) => {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: "Both fields are required" });
     if (newPassword.length < 8) return res.status(400).json({ error: "New password must be at least 8 characters" });
+    if (newPassword.length > 128) return res.status(400).json({ error: "Password must be 128 characters or less" });
     await userService.changePassword(req.userId!, currentPassword, newPassword);
     res.json({ message: "Password changed successfully" });
   } catch (err) {

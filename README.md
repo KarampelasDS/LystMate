@@ -33,7 +33,7 @@ The app is designed to feel native on mobile — installable as a PWA, with a bo
 
 - **Collaborative lists** with role-based access — owners, members, and viewers each get the right level of control.
 - **Item management** with quantities, URLs, check-off, inline editing, sorting, and pagination.
-- **Invite system** with email-based invites, role selection, and accept/decline flows for both sent and received invites.
+- **Invite system** with email-based invites, role selection, and accept/decline flows. Invites work even if the recipient doesn't have an account yet — they receive a sign-up link and the invite is linked automatically once they verify their email.
 - **8 colour themes per list** — rose, sage, ocean, lavender, sunset, slate, forest, and default — cascading across backgrounds, cards, text, and accent colours.
 - **Authentication** with JWT access tokens, httpOnly refresh cookies, email verification, forgot/reset password, and rate limiting.
 - **Account management** — display name, email change with verification, password change, sign out all devices, and account deletion.

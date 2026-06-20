@@ -2,6 +2,9 @@ import prisma from "../utils/prisma";
 import { sendEmail } from "./email.service";
 import { listInviteEmail, listInviteNewUserEmail } from "./email-templates";
 
+const escapeHtml = (str: string) =>
+  str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
 export const sendInvite = async (
   listId: string,
   inviterId: string,
@@ -42,8 +45,8 @@ export const sendInvite = async (
     prisma.list.findUnique({ where: { id: listId }, select: { name: true } }),
   ]);
 
-  const inviterName = inviter?.name ?? "Someone";
-  const listName = list?.name ?? "a list";
+  const inviterName = escapeHtml(inviter?.name ?? "Someone");
+  const listName = escapeHtml(list?.name ?? "a list");
 
   if (invitee) {
     sendEmail(
