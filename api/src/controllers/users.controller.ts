@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as userService from "../services/users.service";
 import * as authService from "../services/auth.service";
 
-const SAFE_ERRORS = new Set(["No data to update"]);
+const SAFE_ERRORS = new Set(["No data to update", "Current password is incorrect", "Incorrect password"]);
 
 const handleError = (err: unknown, res: Response) => {
   const message = err instanceof Error ? err.message : null;
@@ -50,6 +50,30 @@ export const requestEmailChange = async (req: Request, res: Response) => {
     }
     await authService.requestEmailChange(userId as string, email);
     res.status(200).json({ message: "Verification email sent to your new address" });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: "Both fields are required" });
+    if (newPassword.length < 8) return res.status(400).json({ error: "New password must be at least 8 characters" });
+    await userService.changePassword(req.userId!, currentPassword, newPassword);
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: "Password is required" });
+    await userService.deleteAccount(req.userId!, password);
+    res.clearCookie("refreshToken");
+    res.json({ message: "Account deleted" });
   } catch (err) {
     handleError(err, res);
   }

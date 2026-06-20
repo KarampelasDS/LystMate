@@ -31,8 +31,8 @@ export function CustomSelect({ value, onChange, options, className = "", size = 
   function handleOpen() {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      // if there's less than 160px to the left, open to the right instead
-      setAlignRight(rect.left >= 160);
+      const spaceRight = window.innerWidth - rect.left;
+      setAlignRight(spaceRight < 200);
     }
     setOpen((v) => !v);
   }

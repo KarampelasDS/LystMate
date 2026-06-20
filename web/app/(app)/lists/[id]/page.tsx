@@ -640,7 +640,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
           <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
             <h2 className="font-serif text-base mb-3">Visibility</h2>
-            <form onSubmit={handleVisibility} className="flex gap-2 items-center">
+            <form onSubmit={handleVisibility} className="flex gap-2 items-center justify-between">
               <CustomSelect
                 value={visibility}
                 onChange={(v) => setVisibility(v as "PUBLIC" | "PRIVATE")}
@@ -677,7 +677,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
           <div className="bg-warm-white border border-red-200 rounded-2xl p-4">
             <h2 className="font-serif text-base text-red-700 mb-3">Danger zone</h2>
-            <button onClick={handleDelete} disabled={actionLoading} className="flex items-center gap-1.5 text-sm text-red-700 border border-red-200 rounded-xl px-4 py-2 hover:bg-red-50 active:scale-95 transition-all duration-150 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleDelete} disabled={actionLoading} className="w-full flex items-center justify-center gap-1.5 text-sm text-red-700 border border-red-200 rounded-xl px-4 py-2.5 hover:bg-red-50 active:scale-95 transition-all duration-150 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed">
               <HiOutlineTrash className="w-4 h-4" />
               Delete this list
             </button>

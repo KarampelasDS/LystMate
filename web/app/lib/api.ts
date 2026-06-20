@@ -278,4 +278,16 @@ export const users = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    json<{ message: string }>("/users/me/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  deleteAccount: (password: string) =>
+    json<{ message: string }>("/users/me", {
+      method: "DELETE",
+      body: JSON.stringify({ password }),
+    }),
 };
