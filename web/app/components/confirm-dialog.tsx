@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+
 interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
@@ -9,23 +12,29 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ message, confirmLabel = "Confirm", onConfirm, onCancel, destructive = false }: ConfirmDialogProps) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-espresso/30 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-warm-white border border-warm-border rounded-2xl p-6 shadow-lg max-w-sm w-full">
-        <p className="text-sm text-espresso mb-5">{message}</p>
-        <div className="flex gap-2 justify-end">
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; }, []);
+
+  const dialog = (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+      onClick={onCancel}
+    >
+      <div
+        style={{ backgroundColor: "#fdf6ee", border: "1px solid #e8d5c0", borderRadius: "16px", padding: "24px", maxWidth: "384px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <p style={{ fontSize: "14px", color: "#2c1810", marginBottom: "20px" }}>{message}</p>
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-warm-border rounded-xl text-warm-brown hover:text-espresso hover:bg-cream transition-colors cursor-pointer select-none"
+            style={{ padding: "8px 16px", fontSize: "14px", border: "1px solid #e8d5c0", borderRadius: "12px", color: "#7a5c44", backgroundColor: "transparent", cursor: "pointer" }}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 text-sm rounded-xl text-warm-white transition-colors cursor-pointer select-none ${
-              destructive ? "bg-red-600 hover:bg-red-700" : "bg-espresso hover:bg-espresso-light"
-            }`}
+            style={{ padding: "8px 16px", fontSize: "14px", borderRadius: "12px", border: "none", color: "#fff", backgroundColor: destructive ? "#dc2626" : "#2c1810", cursor: "pointer" }}
           >
             {confirmLabel}
           </button>
@@ -33,4 +42,6 @@ export function ConfirmDialog({ message, confirmLabel = "Confirm", onConfirm, on
       </div>
     </div>
   );
+
+  return createPortal(dialog, document.body);
 }
