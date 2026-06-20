@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   HiOutlinePencil, HiOutlineEnvelope, HiOutlineExclamationTriangle,
@@ -195,6 +196,12 @@ export default function SettingsPage() {
           <HiArrowRightOnRectangle className="w-4 h-4" />
           Sign out
         </button>
+
+        {/* Legal links */}
+        <div className="flex gap-4 justify-center text-xs text-warm-muted pt-1">
+          <Link href="/privacy" className="hover:text-espresso transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-espresso transition-colors">Terms of Service</Link>
+        </div>
 
         {/* Danger zone */}
         <div className="bg-warm-white border border-red-200 rounded-2xl p-5">

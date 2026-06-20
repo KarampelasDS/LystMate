@@ -89,6 +89,10 @@ export default function LoginPage() {
             <p>No account? <Link href="/register" className="text-espresso hover:underline">Register</Link></p>
             <p>Need to verify? <Link href="/resend-verification" className="text-espresso hover:underline">Resend email</Link></p>
           </div>
+          <div className="mt-6 flex gap-4 justify-center text-xs text-warm-muted">
+            <Link href="/privacy" className="hover:text-espresso transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-espresso transition-colors">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </div>
