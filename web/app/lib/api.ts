@@ -22,6 +22,8 @@ export type List = {
   name: string;
   visibility: "PUBLIC" | "PRIVATE";
   theme: ListTheme;
+  itemCount?: number;
+  role?: "OWNER" | "MEMBER" | "VIEWER";
   createdAt: string;
   updatedAt: string;
 };

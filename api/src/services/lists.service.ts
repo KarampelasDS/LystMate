@@ -30,7 +30,11 @@ export const getLists = async (userId: string, page: number, limit: number) => {
   const [lists, total] = await Promise.all([
     prisma.listMember.findMany({
       where: { userId },
-      include: { list: true },
+      include: {
+        list: {
+          include: { _count: { select: { items: true } } },
+        },
+      },
       orderBy: { list: { createdAt: "desc" } },
       skip: (page - 1) * limit,
       take: limit,
@@ -38,7 +42,7 @@ export const getLists = async (userId: string, page: number, limit: number) => {
     prisma.listMember.count({ where: { userId } }),
   ]);
   return {
-    data: lists.map((lm) => lm.list),
+    data: lists.map((lm) => ({ ...lm.list, itemCount: lm.list._count.items, role: lm.role })),
     total,
     page,
     limit,

@@ -72,7 +72,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-4 gap-3 min-w-0">
         <div className="min-w-0 flex-1">
           <h1 className="font-serif text-2xl sm:text-4xl text-espresso leading-tight truncate">
-            Hey, {user?.name} <span className="wave-emoji">👋</span>
+            Hey, {user?.name} <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f44b.svg" alt="👋" className="wave-emoji inline-block w-8 h-8 sm:w-10 sm:h-10 align-middle" />
           </h1>
         </div>
         <button
@@ -171,8 +171,12 @@ export default function DashboardPage() {
                   <p className="font-serif italic text-2xl text-espresso group-hover:text-espresso-light transition-colors duration-150 leading-snug truncate">
                     {list.name}
                   </p>
-                  <p className="text-xs text-warm-muted mt-0.5">
-                    {list.visibility === "PUBLIC" ? "Public" : "Private"}
+                  <p className="text-xs text-warm-muted mt-0.5 flex items-center gap-1.5">
+                    <span>{list.visibility === "PUBLIC" ? "Public" : "Private"}</span>
+                    <span className="text-warm-border">·</span>
+                    <span>{list.itemCount ?? 0} {(list.itemCount ?? 0) === 1 ? "item" : "items"}</span>
+                    <span className="text-warm-border">·</span>
+                    <span className="capitalize">{list.role?.toLowerCase() ?? "member"}</span>
                   </p>
                 </div>
                 <HiOutlineChevronRight className="w-5 h-5 text-warm-muted ml-3 shrink-0 group-hover:translate-x-1 transition-transform duration-150" />

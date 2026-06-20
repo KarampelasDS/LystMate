@@ -60,6 +60,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [itemsPage, setItemsPage] = useState(1);
   const [itemsTotalPages, setItemsTotalPages] = useState(1);
   const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsTotal, setItemsTotal] = useState(0);
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
@@ -108,6 +109,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       setItemList(res.data);
       setItemsPage(p);
       setItemsTotalPages(res.totalPages);
+      setItemsTotal(res.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load items");
     } finally {
@@ -328,7 +330,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         <div className="min-w-0 flex-1">
           <h1 className="font-serif italic text-3xl sm:text-4xl text-espresso leading-tight truncate">{list.name}</h1>
           <p className="text-xs text-warm-muted mt-0.5">
-            {list.visibility === "PUBLIC" ? "public" : "private"} · {(myRole ?? "viewer").toLowerCase()}
+            {list.visibility === "PUBLIC" ? "public" : "private"} · {(myRole ?? "viewer").toLowerCase()} · {itemsTotal} {itemsTotal === 1 ? "item" : "items"}
           </p>
         </div>
         {!isOwner && myRole && (
