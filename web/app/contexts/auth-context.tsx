@@ -33,7 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Attempt a silent token refresh first; if that fails, user is logged out.
     (async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/auth/refresh`, {
+        const refreshBase = typeof window === "undefined"
+          ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001")
+          : "/api";
+        const res = await fetch(`${refreshBase}/auth/refresh`, {
           method: "POST",
           credentials: "include",
         });
