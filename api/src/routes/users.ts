@@ -6,6 +6,7 @@ import { authenticate } from "../middleware/auth";
 const router = Router();
 router.use(authenticate);
 
+router.get("/me", usersController.getMe);
 router.patch("/me", userLimiter, usersController.updateUser);
 router.post("/me/email", userLimiter, usersController.requestEmailChange);
 

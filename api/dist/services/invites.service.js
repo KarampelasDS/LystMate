@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getInvites = exports.cancelInvite = exports.respondToInvite = exports.sendInvite = void 0;
+exports.getInvites = exports.getSentInvites = exports.cancelInvite = exports.respondToInvite = exports.sendInvite = void 0;
 const prisma_1 = __importDefault(require("../utils/prisma"));
 const sendInvite = async (listId, inviterId, inviteeEmail, role = "VIEWER") => {
     const user = await prisma_1.default.listMember.findUnique({
@@ -15,17 +15,13 @@ const sendInvite = async (listId, inviterId, inviteeEmail, role = "VIEWER") => {
         where: { email: inviteeEmail },
     });
     if (!invitee)
-        throw new Error("Forbidden");
-    const alreadyMember = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: invitee.id, listId } },
-    });
-    if (alreadyMember)
-        throw new Error("User is already a member of this list");
-    const existingInvite = await prisma_1.default.invite.findUnique({
-        where: { listId_inviteeId: { listId, inviteeId: invitee.id } },
-    });
-    if (existingInvite)
-        throw new Error("Invite already sent");
+        throw new Error("Invite could not be sent");
+    const [alreadyMember, existingInvite] = await Promise.all([
+        prisma_1.default.listMember.findUnique({ where: { userId_listId: { userId: invitee.id, listId } } }),
+        prisma_1.default.invite.findUnique({ where: { listId_inviteeId: { listId, inviteeId: invitee.id } } }),
+    ]);
+    if (alreadyMember || existingInvite)
+        throw new Error("Invite could not be sent");
     const invite = await prisma_1.default.invite.create({
         data: {
             listId,
@@ -76,11 +72,25 @@ const cancelInvite = async (inviteId, userId) => {
     return { success: true };
 };
 exports.cancelInvite = cancelInvite;
+const getSentInvites = async (userId, page, limit) => {
+    const [invites, total] = await Promise.all([
+        prisma_1.default.invite.findMany({
+            where: { inviterId: userId, status: "PENDING" },
+            include: { list: true, invitee: { select: { id: true, name: true, email: true } } },
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: { createdAt: "desc" },
+        }),
+        prisma_1.default.invite.count({ where: { inviterId: userId, status: "PENDING" } }),
+    ]);
+    return { data: invites, total, page, limit, totalPages: Math.ceil(total / limit) };
+};
+exports.getSentInvites = getSentInvites;
 const getInvites = async (userId, page, limit) => {
     const [invites, total] = await Promise.all([
         prisma_1.default.invite.findMany({
             where: { inviteeId: userId, status: "PENDING" },
-            include: { list: true },
+            include: { list: true, inviter: { select: { id: true, name: true, email: true } } },
             skip: (page - 1) * limit,
             take: limit,
         }),

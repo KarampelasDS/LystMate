@@ -36,10 +36,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const authController = __importStar(require("../controllers/auth.controller"));
 const rateLimit_1 = require("../middleware/rateLimit");
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.post("/register", rateLimit_1.authLimiter, authController.register);
 router.post("/login", rateLimit_1.authLimiter, authController.login);
 router.post("/refresh", rateLimit_1.authLimiter, authController.refresh);
 router.post("/logout", rateLimit_1.authLimiter, authController.logout);
+router.delete("/sessions", auth_1.authenticate, authController.logoutAll);
+router.get("/verify-email", rateLimit_1.authLimiter, authController.verifyEmail);
+router.post("/resend-verification", rateLimit_1.authLimiter, authController.resendVerification);
+router.post("/forgot-password", rateLimit_1.authLimiter, authController.forgotPassword);
+router.post("/reset-password", rateLimit_1.authLimiter, authController.resetPassword);
 exports.default = router;
 //# sourceMappingURL=auth.js.map

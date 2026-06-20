@@ -39,6 +39,8 @@ const rateLimit_1 = require("../middleware/rateLimit");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
-router.patch("/me", rateLimit_1.authLimiter, usersController.updateUser);
+router.get("/me", usersController.getMe);
+router.patch("/me", rateLimit_1.userLimiter, usersController.updateUser);
+router.post("/me/email", rateLimit_1.userLimiter, usersController.requestEmailChange);
 exports.default = router;
 //# sourceMappingURL=users.js.map

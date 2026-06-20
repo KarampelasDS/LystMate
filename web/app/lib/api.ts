@@ -3,20 +3,11 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // ── token storage ────────────────────────────────────────────────────────────
 
 let _token: string | null = null;
+let _onUnauthenticated: (() => void) | null = null;
 
-export function setToken(t: string | null) {
-  _token = t;
-  if (typeof window !== "undefined") {
-    t ? localStorage.setItem("token", t) : localStorage.removeItem("token");
-  }
-}
-
-export function getToken(): string | null {
-  if (!_token && typeof window !== "undefined") {
-    _token = localStorage.getItem("token");
-  }
-  return _token;
-}
+export function setToken(t: string | null) { _token = t; }
+export function getToken(): string | null { return _token; }
+export function setUnauthenticatedHandler(fn: () => void) { _onUnauthenticated = fn; }
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +65,7 @@ async function doRefresh(): Promise<string | null> {
       method: "POST",
       credentials: "include",
     });
-    if (!res.ok) { setToken(null); return null; }
+    if (!res.ok) { setToken(null); _onUnauthenticated?.(); return null; }
     const data = await res.json();
     setToken(data.token);
     return data.token as string;
@@ -260,6 +251,8 @@ export const invites = {
 // ── users ─────────────────────────────────────────────────────────────────────
 
 export const users = {
+  getMe: () => json<User>("/users/me"),
+
   update: (name: string) =>
     json<{ message: string; user: { name: string; email: string } }>("/users/me", {
       method: "PATCH",

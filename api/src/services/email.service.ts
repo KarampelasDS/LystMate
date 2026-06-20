@@ -1,12 +1,13 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const from = process.env.RESEND_FROM || "";
+const from = process.env.RESEND_FROM;
+if (!from) throw new Error("RESEND_FROM env var must be set");
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const response = await resend.emails.send({
-      from: from,
+      from: from!,
       to: to,
       subject: subject,
       html: html,

@@ -26,6 +26,9 @@ function SkeletonList() {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<List[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -34,11 +37,14 @@ export default function DashboardPage() {
   const [formError, setFormError] = useState("");
   const [sort, setSort] = useState<"default" | "name">("default");
 
-  async function load() {
+  async function load(p = page) {
     setLoading(true);
     try {
-      const res = await lists.getAll();
+      const res = await lists.getAll(p);
       setData(res.data);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
+      setPage(p);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load lists");
     } finally {
@@ -46,7 +52,7 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(1); }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -55,7 +61,7 @@ export default function DashboardPage() {
       await lists.create(newName, newVisibility);
       setNewName("");
       setCreating(false);
-      load();
+      load(1);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Failed to create list");
     }
@@ -131,7 +137,7 @@ export default function DashboardPage() {
       <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden">
         {!loading && (
           <div className="flex items-center justify-between px-5 py-2.5 border-b border-warm-border bg-cream/60">
-            <span className="text-sm font-medium text-espresso">Your lists <span className="text-warm-muted font-normal">· {data.length}</span></span>
+            <span className="text-sm font-medium text-espresso">Your lists <span className="text-warm-muted font-normal">· {total}</span></span>
             {data.length > 1 && (
               <CustomSelect
                 size="sm"
@@ -175,6 +181,26 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => load(page - 1)}
+            disabled={page === 1 || loading}
+            className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-warm-muted">{page} / {totalPages}</span>
+          <button
+            onClick={() => load(page + 1)}
+            disabled={page === totalPages || loading}
+            className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import helmet from "helmet";
 
 const app = express();
 
-app.set("trust proxy", 1);
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 app.use(
   cors({

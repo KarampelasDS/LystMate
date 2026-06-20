@@ -14,14 +14,11 @@ export const sendInvite = async (
     where: { email: inviteeEmail },
   });
   if (!invitee) throw new Error("Invite could not be sent");
-  const alreadyMember = await prisma.listMember.findUnique({
-    where: { userId_listId: { userId: invitee.id, listId } },
-  });
-  if (alreadyMember) throw new Error("User is already a member of this list");
-  const existingInvite = await prisma.invite.findUnique({
-    where: { listId_inviteeId: { listId, inviteeId: invitee.id } },
-  });
-  if (existingInvite) throw new Error("Invite already sent");
+  const [alreadyMember, existingInvite] = await Promise.all([
+    prisma.listMember.findUnique({ where: { userId_listId: { userId: invitee.id, listId } } }),
+    prisma.invite.findUnique({ where: { listId_inviteeId: { listId, inviteeId: invitee.id } } }),
+  ]);
+  if (alreadyMember || existingInvite) throw new Error("Invite could not be sent");
   const invite = await prisma.invite.create({
     data: {
       listId,

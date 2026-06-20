@@ -108,41 +108,28 @@ describe("Lists API", () => {
     // ─── GET /lists/:id ───────────────────────────────────────────────────────
     describe("GET /lists/:id", () => {
         it("returns 403 when user is not a member and list is private", async () => {
-            mockListFindUnique.mockResolvedValueOnce({
-                id: "list-1",
-                name: "My List",
-                visibility: "PRIVATE",
-                items: [],
-                members: [], // user-1 is not in here
-            });
+            mockListFindUnique.mockResolvedValueOnce({ id: "list-1", name: "My List", visibility: "PRIVATE" });
+            mockListMember.mockResolvedValueOnce(null); // user-1 is not a member
             const res = await (0, supertest_1.default)(app_1.default).get("/lists/list-1").set(AUTH);
             expect(res.status).toBe(403);
         });
         it("returns the list when user is a member", async () => {
-            mockListFindUnique.mockResolvedValueOnce({
-                id: "list-1",
-                name: "My List",
-                visibility: "PRIVATE",
-                items: [],
-                members: [{ userId: "user-1", role: "OWNER" }],
-            });
+            mockListFindUnique.mockResolvedValueOnce({ id: "list-1", name: "My List", visibility: "PRIVATE" });
+            mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" });
+            mockListMemberFindMany.mockResolvedValueOnce([{ userId: "user-1", role: "OWNER" }]);
             const res = await (0, supertest_1.default)(app_1.default).get("/lists/list-1").set(AUTH);
             expect(res.status).toBe(200);
             expect(res.body.name).toBe("My List");
         });
         it("returns 403 when list does not exist", async () => {
             mockListFindUnique.mockResolvedValueOnce(null);
+            mockListMember.mockResolvedValueOnce(null);
             const res = await (0, supertest_1.default)(app_1.default).get("/lists/nonexistent").set(AUTH);
             expect(res.status).toBe(403);
         });
         it("allows access to a public list for non-members", async () => {
-            mockListFindUnique.mockResolvedValueOnce({
-                id: "list-1",
-                name: "Public List",
-                visibility: "PUBLIC",
-                items: [],
-                members: [], // user-1 is not a member
-            });
+            mockListFindUnique.mockResolvedValueOnce({ id: "list-1", name: "Public List", visibility: "PUBLIC" });
+            mockListMember.mockResolvedValueOnce(null); // user-1 is not a member
             const res = await (0, supertest_1.default)(app_1.default).get("/lists/list-1").set(AUTH);
             expect(res.status).toBe(200);
         });
@@ -247,7 +234,10 @@ describe("Lists API", () => {
             expect(res.status).toBe(400);
         });
         it("returns 403 when user is not the owner", async () => {
-            mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default)
                 .patch("/lists/list-1/transfer")
                 .set(AUTH)
@@ -255,9 +245,13 @@ describe("Lists API", () => {
             expect(res.status).toBe(403);
         });
         it("transfers ownership when user is the owner", async () => {
-            mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" });
-            mockListMember.mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
-            mockTransaction.mockResolvedValue({});
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember
+                    .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
+                    .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+                mockListMemberUpdate.mockResolvedValue({});
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default)
                 .patch("/lists/list-1/transfer")
                 .set(AUTH)
@@ -268,15 +262,21 @@ describe("Lists API", () => {
     // ─── DELETE /lists/:id/members/:memberId ─────────────────────────────────
     describe("DELETE /lists/:id/members/:memberId", () => {
         it("returns 403 when user is not the owner", async () => {
-            mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default).delete("/lists/list-1/members/user-2").set(AUTH);
             expect(res.status).toBe(403);
         });
         it("returns 204 when owner removes a member", async () => {
-            mockListMember
-                .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
-                .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
-            mockListMemberDelete.mockResolvedValue({});
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember
+                    .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
+                    .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+                mockListMemberDelete.mockResolvedValue({});
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default).delete("/lists/list-1/members/user-2").set(AUTH);
             expect(res.status).toBe(204);
         });
@@ -298,7 +298,10 @@ describe("Lists API", () => {
             expect(res.status).toBe(400);
         });
         it("returns 403 when user is not the owner", async () => {
-            mockListMember.mockResolvedValue({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember.mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "MEMBER" });
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default)
                 .patch("/lists/list-1/members/user-2")
                 .set(AUTH)
@@ -306,10 +309,13 @@ describe("Lists API", () => {
             expect(res.status).toBe(403);
         });
         it("updates member role when user is the owner", async () => {
-            mockListMember
-                .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
-                .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
-            mockListMemberUpdate.mockResolvedValue({ userId: "user-2", role: "VIEWER" });
+            mockTransaction.mockImplementationOnce(async (fn) => {
+                mockListMember
+                    .mockResolvedValueOnce({ userId: "user-1", listId: "list-1", role: "OWNER" })
+                    .mockResolvedValueOnce({ userId: "user-2", listId: "list-1", role: "MEMBER" });
+                mockListMemberUpdate.mockResolvedValue({ userId: "user-2", role: "VIEWER" });
+                return fn(prisma_1.default);
+            });
             const res = await (0, supertest_1.default)(app_1.default)
                 .patch("/lists/list-1/members/user-2")
                 .set(AUTH)

@@ -33,8 +33,25 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.refresh = exports.login = exports.register = void 0;
+exports.resetPassword = exports.logoutAll = exports.forgotPassword = exports.resendVerification = exports.verifyEmail = exports.logout = exports.refresh = exports.login = exports.register = void 0;
 const authService = __importStar(require("../services/auth.service"));
+const SAFE_ERRORS = new Set([
+    "Invalid Credentials",
+    "Invalid or expired token",
+    "Email is required",
+    "Token and new password is required",
+    "Email not verified",
+]);
+const handleError = (err, res) => {
+    const message = err instanceof Error ? err.message : null;
+    if (message === "Authorization Error") {
+        return res.status(401).json({ error: message });
+    }
+    if (message && SAFE_ERRORS.has(message)) {
+        return res.status(400).json({ error: message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+};
 const register = async (req, res) => {
     try {
         const body = req.body;
@@ -44,19 +61,29 @@ const register = async (req, res) => {
                 .json({ error: "Name, email and password are required" });
         }
         const { name, email, password } = req.body;
+        if (name.length > 100) {
+            return res
+                .status(400)
+                .json({ error: "Name must be 100 characters or less" });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+            return res.status(400).json({ error: "Invalid email format" });
+        }
+        if (password.length < 8) {
+            return res
+                .status(400)
+                .json({ error: "Password must be at least 8 characters" });
+        }
+        if (password.length > 128) {
+            return res
+                .status(400)
+                .json({ error: "Password must be 128 characters or less" });
+        }
         const result = await authService.register(name, email, password);
-        res.cookie("refreshToken", result.rawRefreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-        res.status(201).json({ token: result.token, user: result.user });
+        res.status(201).json({ message: "Registration successful. Please check your email to verify your account.", user: result.user });
     }
     catch (err) {
-        res
-            .status(400)
-            .json({ error: err instanceof Error ? err.message : "Unknown error" });
+        handleError(err, res);
     }
 };
 exports.register = register;
@@ -77,37 +104,133 @@ const login = async (req, res) => {
         res.status(200).json({ token: result.token, user: result.user });
     }
     catch (err) {
-        res
-            .status(400)
-            .json({ error: err instanceof Error ? err.message : "Unknown error" });
+        handleError(err, res);
     }
 };
 exports.login = login;
 const refresh = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken)
+            return res.status(401).json({ error: "Authorization Error" });
         const result = await authService.refreshToken(refreshToken);
+        res.cookie("refreshToken", result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
         return res.status(200).json({ token: result.token });
     }
     catch (err) {
-        return res
-            .status(401)
-            .json({ error: err instanceof Error ? err.message : "Unknown error" });
+        return handleError(err, res);
     }
 };
 exports.refresh = refresh;
 const logout = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken)
+            return res.status(401).json({ error: "Authorization Error" });
         const result = await authService.logout(refreshToken);
-        res.clearCookie("refreshToken");
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
         return res.status(200).json(result);
     }
     catch (err) {
-        return res
-            .status(401)
-            .json({ error: err instanceof Error ? err.message : "Unknown error" });
+        return handleError(err, res);
     }
 };
 exports.logout = logout;
+const verifyEmail = async (req, res) => {
+    try {
+        const token = req.query.token;
+        if (!token || token.length > 128)
+            return res.status(400).json({ error: "Token is required" });
+        const result = await authService.verifyEmail(token);
+        return res.status(200).json(result);
+    }
+    catch (err) {
+        return handleError(err, res);
+    }
+};
+exports.verifyEmail = verifyEmail;
+const resendVerification = async (req, res) => {
+    try {
+        const email = req.body?.email;
+        if (!email)
+            return res.status(400).json({ error: "Email is required" });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+            return res.status(400).json({ error: "Invalid email format" });
+        await authService.resendVerification(email);
+        return res.status(200).json({ message: "If that email exists and is unverified, a new link has been sent" });
+    }
+    catch (err) {
+        return handleError(err, res);
+    }
+};
+exports.resendVerification = resendVerification;
+const forgotPassword = async (req, res) => {
+    try {
+        const body = req.body;
+        const email = body.email;
+        if (!body || !email)
+            throw new Error("Email is required");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
+            return res.status(400).json({ error: "Invalid email format" });
+        await authService.forgotPassword(email);
+        res
+            .status(200)
+            .json({ message: "If that email exists, a reset link has been sent" });
+    }
+    catch (err) {
+        return handleError(err, res);
+    }
+};
+exports.forgotPassword = forgotPassword;
+const logoutAll = async (req, res) => {
+    try {
+        const result = await authService.revokeAllSessions(req.userId);
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+        return res.status(200).json(result);
+    }
+    catch (err) {
+        return handleError(err, res);
+    }
+};
+exports.logoutAll = logoutAll;
+const resetPassword = async (req, res) => {
+    try {
+        const body = req.body;
+        const token = body.token;
+        const newPassword = body.newPassword;
+        if (!body || !token || !newPassword)
+            throw new Error("Token and new password is required");
+        if (token.length > 128)
+            return res.status(400).json({ error: "Invalid or expired token" });
+        if (newPassword.length < 8) {
+            return res
+                .status(400)
+                .json({ error: "Password must be at least 8 characters" });
+        }
+        if (newPassword.length > 128) {
+            return res
+                .status(400)
+                .json({ error: "Password must be 128 characters or less" });
+        }
+        const result = await authService.resetPassword(token, newPassword);
+        return res.status(200).json(result);
+    }
+    catch (err) {
+        return handleError(err, res);
+    }
+};
+exports.resetPassword = resetPassword;
 //# sourceMappingURL=auth.controller.js.map

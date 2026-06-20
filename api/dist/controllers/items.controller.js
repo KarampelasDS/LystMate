@@ -47,6 +47,22 @@ const createItem = async (req, res) => {
         const { name, url, quantity = 1 } = req.body;
         if (!name)
             return res.status(400).json({ error: "Name is required" });
+        if (name.length > 255)
+            return res.status(400).json({ error: "Name must be 255 characters or less" });
+        if (url) {
+            try {
+                const parsed = new URL(url);
+                if (!["http:", "https:"].includes(parsed.protocol))
+                    throw new Error();
+            }
+            catch {
+                return res.status(400).json({ error: "URL must be a valid http or https URL" });
+            }
+        }
+        if (url && url.length > 2048)
+            return res.status(400).json({ error: "URL must be 2048 characters or less" });
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999)
+            return res.status(400).json({ error: "Quantity must be between 1 and 9999" });
         const item = await itemsService.createItem(listId, req.userId, name, url, quantity);
         res.status(201).json(item);
     }
@@ -58,7 +74,7 @@ exports.createItem = createItem;
 const getItems = async (req, res) => {
     try {
         const { listId } = req.params;
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const page = Math.min(Math.max(parseInt(req.query.page) || 1, 1), 1000);
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const items = await itemsService.getItems(listId, req.userId, page, limit);
         res.status(200).json(items);
@@ -72,8 +88,26 @@ const updateItem = async (req, res) => {
     try {
         const { listId, itemId } = req.params;
         const { name, url, quantity, checked } = req.body;
-        if (!name && !url && !quantity && checked === undefined)
+        if (!name && url === undefined && quantity === undefined && checked === undefined)
             return res.status(400).json({ error: "Nothing to update" });
+        if (name && name.length > 255)
+            return res.status(400).json({ error: "Name must be 255 characters or less" });
+        if (url !== undefined && url !== null) {
+            try {
+                const parsed = new URL(url);
+                if (!["http:", "https:"].includes(parsed.protocol))
+                    throw new Error();
+            }
+            catch {
+                return res.status(400).json({ error: "URL must be a valid http or https URL" });
+            }
+            if (url.length > 2048)
+                return res.status(400).json({ error: "URL must be 2048 characters or less" });
+        }
+        if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 1 || quantity > 9999))
+            return res.status(400).json({ error: "Quantity must be between 1 and 9999" });
+        if (checked !== undefined && typeof checked !== "boolean")
+            return res.status(400).json({ error: "Checked must be a boolean" });
         const item = await itemsService.updateItem(listId, itemId, req.userId, name, url, quantity, checked);
         res.status(200).json(item);
     }

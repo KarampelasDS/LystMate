@@ -33,16 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getInvites = exports.cancelInvite = exports.respondToInvite = exports.sendInvite = void 0;
+exports.getInvites = exports.getSentInvites = exports.cancelInvite = exports.respondToInvite = exports.sendInvite = void 0;
 const invitesService = __importStar(require("../services/invites.service"));
 const handleError = (error, res) => {
     if (error instanceof Error && error.message === "Forbidden") {
         return res.status(403).json({ error: "Forbidden" });
     }
     if (error instanceof Error &&
-        (error.message === "Invite already sent" ||
-            error.message === "Invite already responded to" ||
-            error.message === "User is already a member of this list")) {
+        (error.message === "Invite already responded to" ||
+            error.message === "Invite could not be sent")) {
         return res.status(400).json({ error: error.message });
     }
     return res.status(500).json({ error: "Internal server error" });
@@ -54,6 +53,9 @@ const sendInvite = async (req, res) => {
             return res.status(400).json({
                 error: "List ID and invitee email are required",
             });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteeEmail) || inviteeEmail.length > 254) {
+            return res.status(400).json({ error: "Invalid email" });
         }
         if (role !== "VIEWER" && role !== "MEMBER") {
             return res.status(400).json({ error: "Role must be VIEWER or MEMBER" });
@@ -98,9 +100,21 @@ const cancelInvite = async (req, res) => {
     }
 };
 exports.cancelInvite = cancelInvite;
+const getSentInvites = async (req, res) => {
+    try {
+        const page = Math.min(Math.max(parseInt(req.query.page) || 1, 1), 1000);
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const result = await invitesService.getSentInvites(req.userId, page, limit);
+        res.status(200).json(result);
+    }
+    catch (err) {
+        handleError(err, res);
+    }
+};
+exports.getSentInvites = getSentInvites;
 const getInvites = async (req, res) => {
     try {
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const page = Math.min(Math.max(parseInt(req.query.page) || 1, 1), 1000);
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const result = await invitesService.getInvites(req.userId, page, limit);
         res.status(200).json(result);

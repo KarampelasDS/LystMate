@@ -34,10 +34,9 @@ export default function SettingsPage() {
     setNameMsg("");
     setNameLoading(true);
     try {
-      const res = await users.update(name);
-      const updated = { ...user!, name: res.user.name };
+      await users.update(name);
+      const updated = await users.getMe();
       setUser(updated);
-      localStorage.setItem("user", JSON.stringify(updated));
       setNameMsg("Name updated.");
     } catch (err) {
       setNameMsg(err instanceof Error ? err.message : "Failed to update name");
@@ -66,7 +65,6 @@ export default function SettingsPage() {
     try {
       await auth.logoutAll();
       setToken(null);
-      localStorage.removeItem("user");
       router.replace("/login");
     } catch (err) {
       setLogoutAllMsg(err instanceof Error ? err.message : "Failed");

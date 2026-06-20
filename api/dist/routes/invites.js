@@ -36,11 +36,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const invitesController = __importStar(require("../controllers/invites.controller"));
 const auth_1 = require("../middleware/auth");
+const rateLimit_1 = require("../middleware/rateLimit");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
-router.post("/", invitesController.sendInvite);
-router.patch("/:id", invitesController.respondToInvite);
-router.delete("/:id", invitesController.cancelInvite);
+router.post("/", rateLimit_1.inviteLimiter, invitesController.sendInvite);
+router.patch("/:id", rateLimit_1.inviteLimiter, invitesController.respondToInvite);
+router.delete("/:id", rateLimit_1.inviteLimiter, invitesController.cancelInvite);
+router.get("/sent", invitesController.getSentInvites);
 router.get("/", invitesController.getInvites);
 exports.default = router;
 //# sourceMappingURL=invites.js.map

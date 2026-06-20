@@ -35,12 +35,17 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateMember = exports.transferOwnership = exports.removeMember = exports.leaveList = exports.changeListVisibility = exports.renameList = exports.deleteList = exports.getMembers = exports.getList = exports.getLists = exports.createList = void 0;
 const listsService = __importStar(require("../services/lists.service"));
+const SAFE_ERRORS = new Set([
+    "You must transfer ownership before leaving",
+    "Cannot remove yourself, use leave list",
+    "You are already the owner",
+    "Cannot change your own role",
+]);
 const handleError = (error, res) => {
     if (error instanceof Error && error.message === "Forbidden") {
         return res.status(403).json({ error: "Forbidden" });
     }
-    if (error instanceof Error &&
-        error.message === "You must transfer ownership before leaving") {
+    if (error instanceof Error && SAFE_ERRORS.has(error.message)) {
         return res.status(400).json({ error: error.message });
     }
     return res.status(500).json({ error: "Internal server error" });
@@ -50,6 +55,9 @@ const createList = async (req, res) => {
         const { name, visibility = "PRIVATE" } = req.body;
         if (!name) {
             return res.status(400).json({ error: "Name is required" });
+        }
+        if (name.length > 100) {
+            return res.status(400).json({ error: "Name must be 100 characters or less" });
         }
         if (visibility !== "PUBLIC" && visibility !== "PRIVATE") {
             return res
@@ -66,7 +74,7 @@ const createList = async (req, res) => {
 exports.createList = createList;
 const getLists = async (req, res) => {
     try {
-        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const page = Math.min(Math.max(parseInt(req.query.page) || 1, 1), 1000);
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const lists = await listsService.getLists(req.userId, page, limit);
         res.json(lists);
@@ -80,7 +88,7 @@ const getList = async (req, res) => {
     try {
         const list = await listsService.getList(req.params.id, req.userId);
         if (!list)
-            return res.status(403).json({ error: "Forbidden" });
+            return res.status(404).json({ error: "Not found" });
         res.json(list);
     }
     catch (error) {
@@ -90,7 +98,9 @@ const getList = async (req, res) => {
 exports.getList = getList;
 const getMembers = async (req, res) => {
     try {
-        const members = await listsService.getMembers(req.params.id, req.userId);
+        const page = Math.min(Math.max(parseInt(req.query.page) || 1, 1), 1000);
+        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const members = await listsService.getMembers(req.params.id, req.userId, page, limit);
         res.json(members);
     }
     catch (error) {
@@ -113,6 +123,9 @@ const renameList = async (req, res) => {
         const { name } = req.body;
         if (!name) {
             return res.status(400).json({ error: "Name is required" });
+        }
+        if (name.length > 100) {
+            return res.status(400).json({ error: "Name must be 100 characters or less" });
         }
         const updatedList = await listsService.renameList(req.params.id, name, req.userId);
         res.json(updatedList);

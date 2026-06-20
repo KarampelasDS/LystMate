@@ -12,6 +12,7 @@ import {
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { CustomSelect } from "@/app/components/custom-select";
 import { Alert } from "@/app/components/alert";
+import { ConfirmDialog } from "@/app/components/confirm-dialog";
 import { useAuth } from "@/app/contexts/auth-context";
 import { lists, items, invites, type List, type Item, type Member } from "@/app/lib/api";
 
@@ -56,6 +57,8 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [listLoading, setListLoading] = useState(true);
 
   const [itemList, setItemList] = useState<Item[]>([]);
+  const [itemsPage, setItemsPage] = useState(1);
+  const [itemsTotalPages, setItemsTotalPages] = useState(1);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [newItemName, setNewItemName] = useState("");
   const [newItemUrl, setNewItemUrl] = useState("");
@@ -69,6 +72,10 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"VIEWER" | "MEMBER">("VIEWER");
   const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteError, setInviteError] = useState("");
+
+  const [confirm, setConfirm] = useState<{ message: string; label: string; onConfirm: () => void } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [renameName, setRenameName] = useState("");
   const [renameMsg, setRenameMsg] = useState("");
@@ -91,11 +98,13 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [id]);
 
-  const loadItems = useCallback(async () => {
+  const loadItems = useCallback(async (p = 1) => {
     setItemsLoading(true);
     try {
-      const res = await items.getAll(id);
+      const res = await items.getAll(id, p);
       setItemList(res.data);
+      setItemsPage(p);
+      setItemsTotalPages(res.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load items");
     } finally {
@@ -128,14 +137,15 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     try {
       await items.create(id, newItemName, newItemUrl || undefined, newItemQty);
       setNewItemName(""); setNewItemUrl(""); setNewItemQty(1); setAddingItem(false);
-      loadItems();
+      loadItems(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add item");
     }
   }
 
   async function handleToggle(item: Item) {
-    try { await items.update(id, item.id, { checked: !item.checked }); loadItems(); } catch {}
+    try { await items.update(id, item.id, { checked: !item.checked }); loadItems(itemsPage); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed to update item"); }
   }
 
   async function handleUpdateItem(e: React.FormEvent) {
@@ -148,26 +158,26 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         quantity: editingItem.quantity,
       });
       setEditingItem(null);
-      loadItems();
+      loadItems(itemsPage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update item");
     }
   }
 
   async function handleDeleteItem(itemId: string) {
-    try { await items.delete(id, itemId); loadItems(); }
+    try { await items.delete(id, itemId); loadItems(itemsPage); }
     catch (err) { setError(err instanceof Error ? err.message : "Failed to delete item"); }
   }
 
   async function handleSendInvite(e: React.FormEvent) {
     e.preventDefault();
-    setInviteMsg("");
+    setInviteMsg(""); setInviteError("");
     try {
       await invites.send(id, inviteEmail, inviteRole);
       setInviteEmail("");
       setInviteMsg("Invite sent.");
     } catch (err) {
-      setInviteMsg(err instanceof Error ? err.message : "Failed to send invite");
+      setInviteError(err instanceof Error ? err.message : "Failed to send invite");
     }
   }
 
@@ -204,15 +214,29 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   }
 
   async function handleLeave() {
-    if (!confirm("Leave this list?")) return;
-    try { await lists.leave(id); router.replace("/dashboard"); }
-    catch (err) { setError(err instanceof Error ? err.message : "Failed to leave"); }
+    setConfirm({
+      message: "Are you sure you want to leave this list?",
+      label: "Leave",
+      onConfirm: async () => {
+        setConfirm(null); setActionLoading(true);
+        try { await lists.leave(id); router.replace("/dashboard"); }
+        catch (err) { setError(err instanceof Error ? err.message : "Failed to leave"); }
+        finally { setActionLoading(false); }
+      },
+    });
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this list? This cannot be undone.")) return;
-    try { await lists.delete(id); router.replace("/dashboard"); }
-    catch (err) { setError(err instanceof Error ? err.message : "Failed to delete"); }
+    setConfirm({
+      message: "Delete this list? This cannot be undone.",
+      label: "Delete",
+      onConfirm: async () => {
+        setConfirm(null); setActionLoading(true);
+        try { await lists.delete(id); router.replace("/dashboard"); }
+        catch (err) { setError(err instanceof Error ? err.message : "Failed to delete"); }
+        finally { setActionLoading(false); }
+      },
+    });
   }
 
   if (listLoading) return (
@@ -224,6 +248,8 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   );
 
   if (!list) return <p className="text-sm text-red-700">{error || "List not found."}</p>;
+
+
 
   const isOwner = myRole === "OWNER";
   const canWrite = myRole === "OWNER" || myRole === "MEMBER";
@@ -239,6 +265,16 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div>
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          confirmLabel={confirm.label}
+          destructive
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
+
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-1 text-sm text-warm-muted hover:text-espresso transition-colors duration-150 mb-3 active:scale-95"
@@ -257,8 +293,9 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         {!isOwner && myRole && (
           <button
             onClick={handleLeave}
+            disabled={actionLoading}
             title="Leave list"
-            className="flex items-center gap-1 text-xs text-warm-muted hover:text-red-700 active:scale-95 transition-all duration-150 cursor-pointer select-none mt-1"
+            className="flex items-center gap-1 text-xs text-warm-muted hover:text-red-700 active:scale-95 transition-all duration-150 cursor-pointer select-none mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <HiOutlineArrowRightOnRectangle className="w-4 h-4" />
             Leave
@@ -276,6 +313,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
       {/* ITEMS */}
       {tab === "items" && (
+        <>
         <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden mb-4">
           {/* toolbar */}
           {!itemsLoading && (itemList.length > 0 || addingItem) && (
@@ -413,10 +451,10 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                     {canWrite && (
                       <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setEditingItem(item)} title="Edit" className="p-2 text-warm-muted hover:text-espresso hover:bg-warm-border rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
+                        <button onClick={() => setEditingItem(item)} aria-label="Edit item" title="Edit" className="p-2 text-warm-muted hover:text-espresso hover:bg-warm-border rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
                           <HiOutlinePencil className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDeleteItem(item.id)} title="Remove" className="p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
+                        <button onClick={() => handleDeleteItem(item.id)} aria-label="Remove item" title="Remove" className="p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
                           <HiOutlineXMark className="w-4 h-4" />
                         </button>
                       </div>
@@ -427,6 +465,26 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
             </div>
           )}
         </div>
+        {itemsTotalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button
+              onClick={() => loadItems(itemsPage - 1)}
+              disabled={itemsPage === 1 || itemsLoading}
+              className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-warm-muted">{itemsPage} / {itemsTotalPages}</span>
+            <button
+              onClick={() => loadItems(itemsPage + 1)}
+              disabled={itemsPage === itemsTotalPages || itemsLoading}
+              className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {/* MEMBERS */}
@@ -453,6 +511,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                   <button type="submit" className={btnPrimary}>Invite</button>
                 </div>
               </form>
+              {inviteError && <div className="mt-2"><Alert message={inviteError} onDismiss={() => setInviteError("")} /></div>}
               {inviteMsg && <div className="mt-2"><Alert message={inviteMsg} onDismiss={() => setInviteMsg("")} variant="info" /></div>}
             </div>
           )}
@@ -480,6 +539,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                         <button
                           onClick={() => handleRemoveMember(m.userId)}
                           title="Remove member"
+                          aria-label="Remove member"
                           className="p-1.5 text-warm-muted hover:text-red-700 hover:bg-red-50 rounded-lg active:scale-90 transition-all duration-150 cursor-pointer"
                         >
                           <HiOutlineUserMinus className="w-4 h-4" />
@@ -540,7 +600,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                       .map((m) => ({ value: m.userId, label: `${m.user.name} (${m.role.toLowerCase()})` })),
                   ]}
                 />
-                <button type="submit" className={btnSecondary}>Transfer</button>
+                <button type="submit" disabled={!transferId} className={btnSecondary}>Transfer</button>
               </form>
             )}
             {transferMsg && <div className="mt-2"><Alert message={transferMsg} onDismiss={() => setTransferMsg("")} variant="info" /></div>}
@@ -548,7 +608,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
           <div className="bg-warm-white border border-red-200 rounded-2xl p-4">
             <h2 className="font-serif text-base text-red-700 mb-3">Danger zone</h2>
-            <button onClick={handleDelete} className="flex items-center gap-1.5 text-sm text-red-700 border border-red-200 rounded-xl px-4 py-2 hover:bg-red-50 active:scale-95 transition-all duration-150 cursor-pointer select-none">
+            <button onClick={handleDelete} disabled={actionLoading} className="flex items-center gap-1.5 text-sm text-red-700 border border-red-200 rounded-xl px-4 py-2 hover:bg-red-50 active:scale-95 transition-all duration-150 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed">
               <HiOutlineTrash className="w-4 h-4" />
               Delete this list
             </button>

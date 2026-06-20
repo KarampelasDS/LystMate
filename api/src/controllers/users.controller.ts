@@ -12,6 +12,15 @@ const handleError = (err: unknown, res: Response) => {
   return res.status(500).json({ error: "Internal server error" });
 };
 
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const user = await userService.getMe(req.userId!);
+    res.json(user);
+  } catch (err) {
+    handleError(err, res);
+  }
+};
+
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;

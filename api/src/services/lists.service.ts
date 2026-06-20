@@ -203,22 +203,20 @@ export const transferOwnership = async (
 
 //Leave List
 export const leaveList = async (id: string, userId: string) => {
-  const member = await prisma.listMember.findUnique({
-    where: { userId_listId: { userId, listId: id } },
-  });
-  if (!member) throw new Error("Forbidden");
-  if (member.role === "OWNER") {
-    const otherMembers = await prisma.listMember.findMany({
-      where: { listId: id, userId: { not: userId } },
+  return prisma.$transaction(async (tx) => {
+    const member = await tx.listMember.findUnique({
+      where: { userId_listId: { userId, listId: id } },
     });
-    if (otherMembers.length > 0) {
-      throw new Error("You must transfer ownership before leaving");
+    if (!member) throw new Error("Forbidden");
+    if (member.role === "OWNER") {
+      const otherMembers = await tx.listMember.findMany({
+        where: { listId: id, userId: { not: userId } },
+      });
+      if (otherMembers.length > 0) throw new Error("You must transfer ownership before leaving");
+      await tx.list.delete({ where: { id } });
+      return { success: true };
     }
-    await prisma.list.delete({ where: { id } });
+    await tx.listMember.delete({ where: { userId_listId: { userId, listId: id } } });
     return { success: true };
-  }
-  await prisma.listMember.delete({
-    where: { userId_listId: { userId, listId: id } },
   });
-  return { success: true };
 };

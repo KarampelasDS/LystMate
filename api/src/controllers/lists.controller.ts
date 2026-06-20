@@ -60,7 +60,7 @@ export const getList = async (req: Request, res: Response) => {
       req.params.id as string,
       req.userId!,
     );
-    if (!list) return res.status(403).json({ error: "Forbidden" });
+    if (!list) return res.status(404).json({ error: "Not found" });
     res.json(list);
   } catch (error) {
     handleError(error, res);

@@ -32,6 +32,7 @@ const getLists = async (userId, page, limit) => {
         prisma_1.default.listMember.findMany({
             where: { userId },
             include: { list: true },
+            orderBy: { list: { createdAt: "desc" } },
             skip: (page - 1) * limit,
             take: limit,
         }),
@@ -48,33 +49,38 @@ const getLists = async (userId, page, limit) => {
 exports.getLists = getLists;
 //Get List Details
 const getList = async (id, userId) => {
-    const list = await prisma_1.default.list.findUnique({
-        where: { id },
-        include: {
-            items: true,
-            members: true,
-        },
-    });
+    const [list, membership] = await Promise.all([
+        prisma_1.default.list.findUnique({ where: { id } }),
+        prisma_1.default.listMember.findUnique({
+            where: { userId_listId: { userId, listId: id } },
+        }),
+    ]);
     if (!list)
         return null;
-    const isMember = list.members.some((m) => m.userId === userId);
-    if (!isMember && list.visibility !== "PUBLIC")
+    if (!membership && list.visibility !== "PUBLIC")
         throw new Error("Forbidden");
+    if (!membership)
+        return list;
     return list;
 };
 exports.getList = getList;
 //Get List Members
-const getMembers = async (listId, userId) => {
+const getMembers = async (listId, userId, page, limit) => {
     const member = await prisma_1.default.listMember.findUnique({
         where: { userId_listId: { userId, listId } },
     });
     if (!member)
         throw new Error("Forbidden");
-    const members = await prisma_1.default.listMember.findMany({
-        where: { listId },
-        include: { user: { select: { id: true, name: true, email: true } } },
-    });
-    return members;
+    const [members, total] = await Promise.all([
+        prisma_1.default.listMember.findMany({
+            where: { listId },
+            include: { user: { select: { id: true, name: true } } },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma_1.default.listMember.count({ where: { listId } }),
+    ]);
+    return { data: members, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
 exports.getMembers = getMembers;
 //Delete List
@@ -118,60 +124,64 @@ const changeListVisibility = async (id, visibility, userId) => {
 exports.changeListVisibility = changeListVisibility;
 //Remove Member
 const removeMember = async (listId, targetUserId, requesterId) => {
-    const requester = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: requesterId, listId } },
-    });
-    if (!requester || requester.role !== "OWNER")
-        throw new Error("Forbidden");
-    if (targetUserId === requesterId)
-        throw new Error("Cannot remove yourself, use leave list");
-    const target = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: targetUserId, listId } },
-    });
-    if (!target)
-        throw new Error("Forbidden");
-    await prisma_1.default.listMember.delete({
-        where: { userId_listId: { userId: targetUserId, listId } },
+    await prisma_1.default.$transaction(async (tx) => {
+        const requester = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: requesterId, listId } },
+        });
+        if (!requester || requester.role !== "OWNER")
+            throw new Error("Forbidden");
+        if (targetUserId === requesterId)
+            throw new Error("Cannot remove yourself, use leave list");
+        const target = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: targetUserId, listId } },
+        });
+        if (!target)
+            throw new Error("Forbidden");
+        await tx.listMember.delete({
+            where: { userId_listId: { userId: targetUserId, listId } },
+        });
     });
     return { success: true };
 };
 exports.removeMember = removeMember;
 //Update Member Role
 const updateMember = async (listId, targetUserId, role, requesterId) => {
-    const requester = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: requesterId, listId } },
-    });
-    if (!requester || requester.role !== "OWNER")
-        throw new Error("Forbidden");
-    if (targetUserId === requesterId)
-        throw new Error("Cannot change your own role");
-    const target = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: targetUserId, listId } },
-    });
-    if (!target)
-        throw new Error("Forbidden");
-    const updated = await prisma_1.default.listMember.update({
-        where: { userId_listId: { userId: targetUserId, listId } },
-        data: { role },
+    const updated = await prisma_1.default.$transaction(async (tx) => {
+        const requester = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: requesterId, listId } },
+        });
+        if (!requester || requester.role !== "OWNER")
+            throw new Error("Forbidden");
+        if (targetUserId === requesterId)
+            throw new Error("Cannot change your own role");
+        const target = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: targetUserId, listId } },
+        });
+        if (!target)
+            throw new Error("Forbidden");
+        return tx.listMember.update({
+            where: { userId_listId: { userId: targetUserId, listId } },
+            data: { role },
+        });
     });
     return updated;
 };
 exports.updateMember = updateMember;
 //Transfer Ownership
 const transferOwnership = async (listId, newOwnerId, requesterId) => {
-    const requester = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: requesterId, listId } },
-    });
-    if (!requester || requester.role !== "OWNER")
-        throw new Error("Forbidden");
-    if (newOwnerId === requesterId)
-        throw new Error("You are already the owner");
-    const target = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId: newOwnerId, listId } },
-    });
-    if (!target)
-        throw new Error("Forbidden");
     await prisma_1.default.$transaction(async (tx) => {
+        const requester = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: requesterId, listId } },
+        });
+        if (!requester || requester.role !== "OWNER")
+            throw new Error("Forbidden");
+        if (newOwnerId === requesterId)
+            throw new Error("You are already the owner");
+        const target = await tx.listMember.findUnique({
+            where: { userId_listId: { userId: newOwnerId, listId } },
+        });
+        if (!target)
+            throw new Error("Forbidden");
         await tx.listMember.update({
             where: { userId_listId: { userId: requesterId, listId } },
             data: { role: "MEMBER" },
@@ -186,25 +196,24 @@ const transferOwnership = async (listId, newOwnerId, requesterId) => {
 exports.transferOwnership = transferOwnership;
 //Leave List
 const leaveList = async (id, userId) => {
-    const member = await prisma_1.default.listMember.findUnique({
-        where: { userId_listId: { userId, listId: id } },
-    });
-    if (!member)
-        throw new Error("Forbidden");
-    if (member.role === "OWNER") {
-        const otherMembers = await prisma_1.default.listMember.findMany({
-            where: { listId: id, userId: { not: userId } },
+    return prisma_1.default.$transaction(async (tx) => {
+        const member = await tx.listMember.findUnique({
+            where: { userId_listId: { userId, listId: id } },
         });
-        if (otherMembers.length > 0) {
-            throw new Error("You must transfer ownership before leaving");
+        if (!member)
+            throw new Error("Forbidden");
+        if (member.role === "OWNER") {
+            const otherMembers = await tx.listMember.findMany({
+                where: { listId: id, userId: { not: userId } },
+            });
+            if (otherMembers.length > 0)
+                throw new Error("You must transfer ownership before leaving");
+            await tx.list.delete({ where: { id } });
+            return { success: true };
         }
-        await prisma_1.default.list.delete({ where: { id } });
+        await tx.listMember.delete({ where: { userId_listId: { userId, listId: id } } });
         return { success: true };
-    }
-    await prisma_1.default.listMember.delete({
-        where: { userId_listId: { userId, listId: id } },
     });
-    return { success: true };
 };
 exports.leaveList = leaveList;
 //# sourceMappingURL=lists.service.js.map

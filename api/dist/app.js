@@ -12,9 +12,17 @@ const invites_1 = __importDefault(require("./routes/invites"));
 const users_1 = __importDefault(require("./routes/users"));
 const rateLimit_1 = require("./middleware/rateLimit");
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const helmet_1 = __importDefault(require("helmet"));
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)());
-app.use(express_1.default.json());
+if (process.env.NODE_ENV === "production")
+    app.set("trust proxy", 1);
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+}));
+app.use((0, helmet_1.default)());
+app.use(express_1.default.json({ limit: "10kb" }));
 app.use((0, cookie_parser_1.default)());
 app.use(rateLimit_1.globalLimiter);
 app.use("/auth", auth_1.default);
@@ -26,6 +34,7 @@ app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
 });
 app.use((err, _req, res, _next) => {
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
 });
 exports.default = app;

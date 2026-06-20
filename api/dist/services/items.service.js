@@ -35,7 +35,7 @@ const getItems = async (listId, userId, page, limit) => {
     const [items, total] = await Promise.all([
         prisma_1.default.item.findMany({
             where: { listId },
-            orderBy: [{ checked: "asc" }, { createdAt: "asc" }],
+            orderBy: { createdAt: "desc" },
             skip: (page - 1) * limit,
             take: limit,
         }),

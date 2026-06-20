@@ -30,17 +30,23 @@ export default function InvitesPage() {
   const [tab, setTab] = useState<"received" | "sent">("received");
 
   const [received, setReceived] = useState<ReceivedInvite[]>([]);
+  const [receivedPage, setReceivedPage] = useState(1);
+  const [receivedTotalPages, setReceivedTotalPages] = useState(1);
   const [sent, setSent] = useState<SentInvite[]>([]);
+  const [sentPage, setSentPage] = useState(1);
+  const [sentTotalPages, setSentTotalPages] = useState(1);
   const [loadingReceived, setLoadingReceived] = useState(true);
   const [loadingSent, setLoadingSent] = useState(true);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function loadReceived() {
+  async function loadReceived(p = 1) {
     setLoadingReceived(true);
     try {
-      const res = await invites.getAll();
+      const res = await invites.getAll(p);
       setReceived(res.data as ReceivedInvite[]);
+      setReceivedPage(p);
+      setReceivedTotalPages(res.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load invites");
     } finally {
@@ -48,11 +54,13 @@ export default function InvitesPage() {
     }
   }
 
-  async function loadSent() {
+  async function loadSent(p = 1) {
     setLoadingSent(true);
     try {
-      const res = await invites.getSent();
+      const res = await invites.getSent(p);
       setSent(res.data as SentInvite[]);
+      setSentPage(p);
+      setSentTotalPages(res.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sent invites");
     } finally {
@@ -107,6 +115,7 @@ export default function InvitesPage() {
       {msg && <div className="mb-4"><Alert message={msg} onDismiss={() => setMsg("")} variant="info" /></div>}
 
       {tab === "received" && (
+        <>
         <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden">
           {loadingReceived ? (
             <SkeletonRows />
@@ -148,9 +157,18 @@ export default function InvitesPage() {
             </div>
           )}
         </div>
+        {receivedTotalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button onClick={() => loadReceived(receivedPage - 1)} disabled={receivedPage === 1 || loadingReceived} className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">Previous</button>
+            <span className="text-sm text-warm-muted">{receivedPage} / {receivedTotalPages}</span>
+            <button onClick={() => loadReceived(receivedPage + 1)} disabled={receivedPage === receivedTotalPages || loadingReceived} className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">Next</button>
+          </div>
+        )}
+        </>
       )}
 
       {tab === "sent" && (
+        <>
         <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden">
           {loadingSent ? (
             <SkeletonRows />
@@ -183,6 +201,14 @@ export default function InvitesPage() {
             </div>
           )}
         </div>
+        {sentTotalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button onClick={() => loadSent(sentPage - 1)} disabled={sentPage === 1 || loadingSent} className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">Previous</button>
+            <span className="text-sm text-warm-muted">{sentPage} / {sentTotalPages}</span>
+            <button onClick={() => loadSent(sentPage + 1)} disabled={sentPage === sentTotalPages || loadingSent} className="px-3 py-1.5 text-sm border border-warm-border rounded-lg text-warm-brown hover:text-espresso hover:bg-cream disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer">Next</button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

@@ -170,9 +170,10 @@ export const verifyEmail = async (token: string) => {
       ...(match.pendingEmail ? { email: match.pendingEmail } : {}),
     },
   });
-  await prisma.emailVerificationToken.delete({
-    where: { id: match.id },
-  });
+  await prisma.emailVerificationToken.delete({ where: { id: match.id } });
+  if (match.pendingEmail) {
+    await prisma.refreshToken.deleteMany({ where: { userId: match.userId } });
+  }
   return { message: "Email verified successfully" };
 };
 
@@ -181,7 +182,7 @@ export const requestEmailChange = async (userId: string, newEmail: string) => {
   if (existing && existing.id !== userId) return;
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("Authorization Error");
-  await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+  await prisma.emailVerificationToken.deleteMany({ where: { userId, pendingEmail: { not: null } } });
   const rawToken = crypto.randomBytes(32).toString("hex");
   const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
   await prisma.emailVerificationToken.create({

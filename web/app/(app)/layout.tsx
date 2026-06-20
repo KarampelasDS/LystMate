@@ -8,7 +8,7 @@ import {
   HiOutlineEnvelope, HiEnvelope,
   HiOutlineCog6Tooth, HiCog6Tooth,
   HiArrowRightOnRectangle, HiOutlineUserCircle,
-  HiShoppingBag,
+  HiClipboardDocumentCheck,
 } from "react-icons/hi2";
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { useAuth } from "@/app/contexts/auth-context";
@@ -50,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2 select-none group"
           >
             <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shrink-0" style={{ background: "#D7A679" }}>
-              <HiShoppingBag className="w-6 h-6 text-warm-white" />
+              <HiClipboardDocumentCheck className="w-6 h-6 text-warm-white" />
             </div>
             <span className="font-serif text-2xl text-espresso leading-none">LystMate</span>
           </Link>
@@ -86,10 +86,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="hidden sm:flex items-center gap-3">
           <Link href="/settings" className="flex items-center gap-2 group cursor-pointer">
+            <span className="text-sm text-warm-muted group-hover:text-espresso transition-colors duration-150 truncate max-w-[120px]">{user.name}</span>
             <span className="transition-transform duration-150 group-hover:scale-105">
               <FaceAvatar name={user.name} size={34} className="rounded-full overflow-hidden" />
             </span>
-            <span className="text-sm text-warm-muted group-hover:text-espresso transition-colors duration-150 truncate max-w-[120px]">{user.name}</span>
           </Link>
           <div className="w-px h-5 bg-warm-border" />
           <button
@@ -112,6 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                aria-current={active ? "page" : undefined}
                 className={`flex-1 flex flex-col items-center gap-1 pt-2 pb-3 relative select-none active:scale-95 transition-transform duration-150 ${
                   active ? "text-espresso" : "text-warm-muted hover:text-warm-brown"
                 }`}

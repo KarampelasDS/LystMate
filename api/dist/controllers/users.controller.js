@@ -33,22 +33,61 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUser = void 0;
+exports.requestEmailChange = exports.updateUser = exports.getMe = void 0;
 const userService = __importStar(require("../services/users.service"));
+const authService = __importStar(require("../services/auth.service"));
+const SAFE_ERRORS = new Set(["No data to update"]);
+const handleError = (err, res) => {
+    const message = err instanceof Error ? err.message : null;
+    if (message && SAFE_ERRORS.has(message)) {
+        return res.status(400).json({ error: message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+};
+const getMe = async (req, res) => {
+    try {
+        const user = await userService.getMe(req.userId);
+        res.json(user);
+    }
+    catch (err) {
+        handleError(err, res);
+    }
+};
+exports.getMe = getMe;
 const updateUser = async (req, res) => {
     try {
         const userId = req.userId;
-        const { name, email } = req.body;
-        const result = await userService.updateUser(userId, name, email);
-        res
-            .status(200)
-            .json({ message: "User updated successfully", user: result });
+        const { name } = req.body;
+        if (!name) {
+            return res.status(400).json({ error: "No data to update" });
+        }
+        if (name.length > 100) {
+            return res.status(400).json({ error: "Name must be 100 characters or less" });
+        }
+        const result = await userService.updateUser(userId, name);
+        res.status(200).json({ message: "User updated successfully", user: result });
     }
     catch (err) {
-        res
-            .status(400)
-            .json({ error: err instanceof Error ? err.message : "Unknown error" });
+        handleError(err, res);
     }
 };
 exports.updateUser = updateUser;
+const requestEmailChange = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: "Email is required" });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+            return res.status(400).json({ error: "Invalid email format" });
+        }
+        await authService.requestEmailChange(userId, email);
+        res.status(200).json({ message: "Verification email sent to your new address" });
+    }
+    catch (err) {
+        handleError(err, res);
+    }
+};
+exports.requestEmailChange = requestEmailChange;
 //# sourceMappingURL=users.controller.js.map

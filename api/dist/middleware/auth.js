@@ -10,10 +10,15 @@ const authenticate = async (req, res, next) => {
     if (!authHeader) {
         return res.status(401).json({ error: "Authorization Error" });
     }
-    const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECRET || "dev_secret";
+    if (!authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Authorization Error" });
+    }
+    const token = authHeader.slice(7);
+    const secret = process.env.JWT_SECRET;
+    if (!secret)
+        return res.status(500).json({ error: "Server configuration error" });
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, secret);
+        const decoded = jsonwebtoken_1.default.verify(token, secret, { algorithms: ["HS256"] });
         req.userId = decoded.userId;
         next();
     }
