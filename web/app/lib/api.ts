@@ -43,6 +43,7 @@ export type Member = {
   role: "OWNER" | "MEMBER" | "VIEWER";
   user: { id: string; name: string };
 };
+export type InviteUser = { id: string; name: string; email: string };
 export type Invite = {
   id: string;
   listId: string;
@@ -51,6 +52,8 @@ export type Invite = {
   role: string;
   status: string;
   list: List;
+  inviter?: InviteUser;
+  invitee?: InviteUser;
 };
 export type Paginated<T> = {
   data: T[];
@@ -247,6 +250,9 @@ export const invites = {
       method: "PATCH",
       body: JSON.stringify({ response }),
     }),
+
+  getSent: (page = 1, limit = 20) =>
+    json<Paginated<Invite & { invitee: { id: string; name: string; email: string } }>>(`/invites/sent?page=${page}&limit=${limit}`),
 
   cancel: (id: string) => apiFetch(`/invites/${id}`, { method: "DELETE" }),
 };

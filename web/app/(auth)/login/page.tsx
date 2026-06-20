@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { HiOutlineEye, HiOutlineEyeSlash } from "react-icons/hi2";
 import { useAuth } from "@/app/contexts/auth-context";
 import { Alert } from "@/app/components/alert";
 
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,14 +52,24 @@ export default function LoginPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-warm-brown mb-1.5 uppercase tracking-wide">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                maxLength={128}
-                className="w-full border border-warm-border rounded-xl px-4 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
-              />
+              <div className="relative w-full">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  maxLength={128}
+                  className="w-full border border-warm-border rounded-xl px-4 py-2.5 pr-10 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-warm-muted hover:text-espresso transition-colors cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <HiOutlineEyeSlash className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             {error && <Alert message={error} onDismiss={() => setError("")} />}
             <button

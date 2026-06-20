@@ -31,6 +31,7 @@ export const getLists = async (userId: string, page: number, limit: number) => {
     prisma.listMember.findMany({
       where: { userId },
       include: { list: true },
+      orderBy: { list: { createdAt: "desc" } },
       skip: (page - 1) * limit,
       take: limit,
     }),

@@ -10,6 +10,7 @@ router.use(authenticate);
 router.post("/", inviteLimiter, invitesController.sendInvite);
 router.patch("/:id", inviteLimiter, invitesController.respondToInvite);
 router.delete("/:id", inviteLimiter, invitesController.cancelInvite);
+router.get("/sent", invitesController.getSentInvites);
 router.get("/", invitesController.getInvites);
 
 export default router;

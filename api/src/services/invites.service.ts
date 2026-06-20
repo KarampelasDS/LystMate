@@ -74,6 +74,24 @@ export const cancelInvite = async (inviteId: string, userId: string) => {
   return { success: true };
 };
 
+export const getSentInvites = async (
+  userId: string,
+  page: number,
+  limit: number,
+) => {
+  const [invites, total] = await Promise.all([
+    prisma.invite.findMany({
+      where: { inviterId: userId, status: "PENDING" },
+      include: { list: true, invitee: { select: { id: true, name: true, email: true } } },
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.invite.count({ where: { inviterId: userId, status: "PENDING" } }),
+  ]);
+  return { data: invites, total, page, limit, totalPages: Math.ceil(total / limit) };
+};
+
 export const getInvites = async (
   userId: string,
   page: number,
@@ -82,7 +100,7 @@ export const getInvites = async (
   const [invites, total] = await Promise.all([
     prisma.invite.findMany({
       where: { inviteeId: userId, status: "PENDING" },
-      include: { list: true },
+      include: { list: true, inviter: { select: { id: true, name: true, email: true } } },
       skip: (page - 1) * limit,
       take: limit,
     }),
