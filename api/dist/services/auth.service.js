@@ -9,6 +9,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 const email_service_1 = require("./email.service");
+const email_templates_1 = require("./email-templates");
 const escapeHtml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -44,12 +45,8 @@ const register = async (name, email, password) => {
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
     });
-    (0, email_service_1.sendEmail)(email, "Welcome to Our App", `<p>Hi ${escapeHtml(name)}, welcome to our app!</p>
-    <p>Please verify your email by clicking the link below:</p>
-    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawVerificationToken}">Verify Email</a>
-    `).catch((error) => {
-        console.error("Error sending welcome email:", error);
-    });
+    (0, email_service_1.sendEmail)(email, "Welcome to LystMate", (0, email_templates_1.welcomeEmail)(escapeHtml(name), rawVerificationToken))
+        .catch((error) => console.error("Error sending welcome email:", error));
     return {
         user: { id: user.id, name: user.name, email: user.email },
     };
@@ -199,10 +196,10 @@ const requestEmailChange = async (userId, newEmail) => {
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
     });
-    (0, email_service_1.sendEmail)(newEmail, "Verify your new email address", `<p>Click the link below to verify your new email address:</p>
-    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawToken}">Verify Email</a>`).catch((error) => console.error("Error sending email change verification:", error));
-    (0, email_service_1.sendEmail)(user.email, "Security alert: email change requested", `<p>A request was made to change the email address on your account to ${escapeHtml(newEmail)}.</p>
-    <p>If this was not you, please contact support immediately.</p>`).catch((error) => console.error("Error sending security alert:", error));
+    (0, email_service_1.sendEmail)(newEmail, "Verify your new email address", (0, email_templates_1.verifyEmailEmail)(rawToken))
+        .catch((error) => console.error("Error sending email change verification:", error));
+    (0, email_service_1.sendEmail)(user.email, "Security alert: email change requested", (0, email_templates_1.emailChangeAlertEmail)(escapeHtml(newEmail)))
+        .catch((error) => console.error("Error sending security alert:", error));
 };
 exports.requestEmailChange = requestEmailChange;
 const resendVerification = async (email) => {
@@ -219,8 +216,8 @@ const resendVerification = async (email) => {
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
     });
-    (0, email_service_1.sendEmail)(email, "Verify your email address", `<p>Click the link below to verify your email address:</p>
-    <a href="${process.env.FRONTEND_URL}/verify-email?token=${rawToken}">Verify Email</a>`).catch((error) => console.error("Error sending verification email:", error));
+    (0, email_service_1.sendEmail)(email, "Verify your email address", (0, email_templates_1.verifyEmailEmail)(rawToken))
+        .catch((error) => console.error("Error sending verification email:", error));
 };
 exports.resendVerification = resendVerification;
 const forgotPassword = async (email) => {
@@ -244,11 +241,8 @@ const forgotPassword = async (email) => {
             expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         },
     });
-    (0, email_service_1.sendEmail)(email, "Reset Password", `<p>Reset your password using the link below:</p>
-    <a href="${process.env.FRONTEND_URL}/reset-password?token=${rawPasswordResetToken}">Reset Password</a>
-    `).catch((error) => {
-        console.error("Error sending welcome email:", error);
-    });
+    (0, email_service_1.sendEmail)(email, "Reset your LystMate password", (0, email_templates_1.resetPasswordEmail)(rawPasswordResetToken))
+        .catch((error) => console.error("Error sending reset password email:", error));
 };
 exports.forgotPassword = forgotPassword;
 const resetPassword = async (token, newPassword) => {
