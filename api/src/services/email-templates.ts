@@ -16,14 +16,7 @@ const layout = (content: string) => `<!DOCTYPE html>
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:24px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:#D7A679;border-radius:10px;width:36px;height:36px;text-align:center;vertical-align:middle;">
-                    <span style="font-size:20px;line-height:36px;">✓</span>
-                  </td>
-                  <td style="padding-left:10px;font-size:22px;font-weight:600;color:#2c1810;font-family:Georgia,serif;">LystMate</td>
-                </tr>
-              </table>
+              <span style="font-size:26px;font-weight:700;color:#2c1810;font-family:Georgia,serif;letter-spacing:-0.5px;">LystMate</span>
             </td>
           </tr>
 
@@ -63,7 +56,7 @@ const muted = (text: string) =>
 export const welcomeEmail = (name: string, token: string) =>
   layout(`
     ${heading(`Welcome, ${name}!`)}
-    ${para("Thanks for signing up. Verify your email address to get started — the link expires in 24 hours.")}
+    ${para("Thanks for signing up. Verify your email address to get started. The link expires in 24 hours.")}
     <div style="text-align:center;margin:8px 0 28px;">
       ${button(`${BASE_URL}/verify-email?token=${token}`, "Verify email address")}
     </div>
@@ -73,7 +66,7 @@ export const welcomeEmail = (name: string, token: string) =>
 export const verifyEmailEmail = (token: string) =>
   layout(`
     ${heading("Verify your email address")}
-    ${para("Click the button below to verify your new email address. The link expires in 24 hours.")}
+    ${para("Click the button below to verify your new email address. This link expires in 24 hours.")}
     <div style="text-align:center;margin:8px 0 28px;">
       ${button(`${BASE_URL}/verify-email?token=${token}`, "Verify email address")}
     </div>
@@ -91,7 +84,7 @@ export const emailChangeAlertEmail = (newEmail: string) =>
 export const resetPasswordEmail = (token: string) =>
   layout(`
     ${heading("Reset your password")}
-    ${para("We received a request to reset your password. Click the button below to choose a new one — the link expires in 1 hour.")}
+    ${para("We received a request to reset your password. Click the button below to choose a new one. The link expires in 1 hour.")}
     <div style="text-align:center;margin:8px 0 28px;">
       ${button(`${BASE_URL}/reset-password?token=${token}`, "Reset password")}
     </div>
