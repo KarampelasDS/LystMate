@@ -8,9 +8,9 @@ import { useAuth } from "@/app/contexts/auth-context";
 import { users, auth, setToken } from "@/app/lib/api";
 import { Alert } from "@/app/components/alert";
 
-const btn = "text-base sm:text-sm px-5 py-3 sm:py-2.5 rounded-xl transition-all duration-150 active:scale-[0.97] cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed shrink-0";
+const btn = "text-sm px-5 py-2.5 rounded-xl transition-all duration-150 active:scale-[0.97] cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed shrink-0";
 const btnPrimary = `${btn} bg-espresso text-warm-white hover:bg-espresso-light`;
-const inputClass = "w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2.5 text-base sm:text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
+const inputClass = "w-full border border-warm-border rounded-xl px-3 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
 
 export default function SettingsPage() {
   const { user, setUser, logout } = useAuth();
@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [emailMsg, setEmailMsg] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const [logoutAllMsg, setLogoutAllMsg] = useState("");
 
@@ -89,12 +91,10 @@ export default function SettingsPage() {
             Display name
           </h2>
           <form onSubmit={handleUpdateName} className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} className={`${inputClass} w-full`} />
-              <p className="text-xs text-warm-muted text-right mt-1">{name.length} / 100</p>
-            </div>
+            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} className={`${inputClass} flex-1`} />
             <button type="submit" disabled={nameLoading || name.trim() === user?.name} className={btnPrimary}>{nameLoading ? "Saving…" : "Save"}</button>
           </form>
+          <p className="text-xs text-warm-muted text-left mt-1">{name.length} / 100</p>
           {nameMsg && <div className="mt-2"><Alert message={nameMsg} onDismiss={() => setNameMsg("")} variant="info" /></div>}
         </div>
 
@@ -103,14 +103,13 @@ export default function SettingsPage() {
             <HiOutlineEnvelope className="w-4 h-4 text-warm-brown shrink-0" />
             Change email
           </h2>
+          <p className="text-xs text-warm-muted mb-1">Current: <span className="text-espresso">{user?.email}</span></p>
           <p className="text-xs text-warm-muted mb-3">A verification link will be sent before the change takes effect.</p>
           <form onSubmit={handleEmailChange} className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value.slice(0, 254))} required maxLength={254} placeholder="new@example.com" className={`${inputClass} w-full`} />
-              <p className="text-xs text-warm-muted text-right mt-1">{email.length} / 254</p>
-            </div>
-            <button type="submit" disabled={emailLoading} className={btnPrimary}>{emailLoading ? "Sending…" : "Send"}</button>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value.slice(0, 254))} required maxLength={254} placeholder="new@example.com" className={`${inputClass} flex-1`} />
+            <button type="submit" disabled={emailLoading || !emailValid} className={btnPrimary}>{emailLoading ? "Sending…" : "Send"}</button>
           </form>
+          <p className="text-xs text-warm-muted text-left mt-1">{email.length} / 254</p>
           {emailMsg && <div className="mt-2"><Alert message={emailMsg} onDismiss={() => setEmailMsg("")} variant="info" /></div>}
         </div>
 

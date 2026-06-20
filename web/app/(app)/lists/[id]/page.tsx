@@ -281,7 +281,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
           {!itemsLoading && (itemList.length > 0 || addingItem) && (
             <div className="flex items-center justify-between px-5 py-2.5 border-b border-warm-border bg-cream/60">
               <div className="flex items-center gap-1.5">
-                {canWrite && !addingItem && (
+                {canWrite && !addingItem ? (
                   <button
                     onClick={() => setAddingItem(true)}
                     className="flex items-center gap-1.5 bg-espresso text-warm-white text-sm px-3.5 py-2 sm:py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none"
@@ -289,6 +289,8 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                     <HiOutlinePlus className="w-4 h-4" />
                     Add item
                   </button>
+                ) : (
+                  <span className="text-sm font-medium text-espresso">Add item</span>
                 )}
               </div>
               <CustomSelect
@@ -433,21 +435,23 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
           {isOwner && (
             <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
               <h2 className="font-serif text-base mb-3">Invite someone</h2>
-              <form onSubmit={handleSendInvite} className="flex gap-2 items-end flex-wrap">
-                <div className="flex-1 min-w-40">
+              <form onSubmit={handleSendInvite} className="flex flex-col gap-2">
+                <div>
                   <label className="block text-xs font-medium text-warm-brown mb-1 uppercase tracking-wide">Email</label>
                   <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value.slice(0, 254))} required maxLength={254} placeholder="friend@example.com" className={inputClass} />
-                  <p className="text-xs text-warm-muted text-right mt-1">{inviteEmail.length} / 254</p>
+                  <p className="text-xs text-warm-muted mt-1">{inviteEmail.length} / 254</p>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-warm-brown mb-1 uppercase tracking-wide">Role</label>
-                  <CustomSelect
-                    value={inviteRole}
-                    onChange={(v) => setInviteRole(v as "VIEWER" | "MEMBER")}
-                    options={[{ value: "VIEWER", label: "Viewer" }, { value: "MEMBER", label: "Member" }]}
-                  />
+                <div className="flex gap-2 items-end">
+                  <div>
+                    <label className="block text-xs font-medium text-warm-brown mb-1 uppercase tracking-wide">Role</label>
+                    <CustomSelect
+                      value={inviteRole}
+                      onChange={(v) => setInviteRole(v as "VIEWER" | "MEMBER")}
+                      options={[{ value: "VIEWER", label: "Viewer" }, { value: "MEMBER", label: "Member" }]}
+                    />
+                  </div>
+                  <button type="submit" className={btnPrimary}>Invite</button>
                 </div>
-                <button type="submit" className={btnPrimary}>Invite</button>
               </form>
               {inviteMsg && <div className="mt-2"><Alert message={inviteMsg} onDismiss={() => setInviteMsg("")} variant="info" /></div>}
             </div>
