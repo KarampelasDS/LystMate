@@ -13,25 +13,34 @@ export const metadata: Metadata = {
     template: "%s · LystMate",
   },
   description: "Create, share and manage lists with friends and family. LystMate makes collaborative list-keeping effortless.",
-  keywords: ["shopping list", "collaborative lists", "shared lists", "grocery list", "wishlist", "list app"],
+  keywords: ["shopping list", "collaborative lists", "shared lists", "grocery list", "wishlist", "list app", "to-do list", "task list"],
   authors: [{ name: "LystMate" }],
   creator: "LystMate",
-  metadataBase: new URL("https://lystmate.com"),
+  metadataBase: new URL("https://www.lystmate.app"),
+  alternates: {
+    canonical: "https://www.lystmate.app",
+  },
   openGraph: {
     title: "LystMate",
     description: "Create, share and manage lists with friends and family.",
+    url: "https://www.lystmate.app",
     siteName: "LystMate",
     locale: "en_US",
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "LystMate",
     description: "Create, share and manage lists with friends and family.",
+    site: "@lystmate",
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 
