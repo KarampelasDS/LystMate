@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         <div className="space-y-8 text-sm text-espresso leading-relaxed">
           <section>
             <h2 className="font-serif text-xl mb-3">Who we are</h2>
-            <p>LystMate is a personal project by Dimitrios Spyridon Karampelas. The service is available at <a href="https://www.lystmate.app" className="underline hover:text-warm-brown">www.lystmate.app</a>. If you have questions about this policy, contact us at <a href="mailto:hello@lystmate.app" className="underline hover:text-warm-brown">hello@lystmate.app</a>.</p>
+            <p>LystMate is a personal project by Dimitrios Spyridon Karampelas. The service is available at <a href="https://www.lystmate.app" className="underline hover:text-warm-brown">www.lystmate.app</a>. If you have questions about this policy, you can reach us through the app.</p>
           </section>
 
           <section>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
               <li><strong>Portability</strong> — request your data in a machine-readable format.</li>
               <li><strong>Object</strong> — object to processing based on legitimate interests.</li>
             </ul>
-            <p className="mt-3">To exercise any of these rights, email us at <a href="mailto:hello@lystmate.app" className="underline hover:text-warm-brown">hello@lystmate.app</a>. We will respond within 30 days.</p>
+            <p className="mt-3">To exercise any of these rights, reach out through the app. We will respond within 30 days.</p>
           </section>
 
           <section>
