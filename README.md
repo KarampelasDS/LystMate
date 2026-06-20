@@ -27,19 +27,19 @@
 
 LystMate is a collaborative list-keeping web app and PWA built around simplicity and sharing. Users create lists, invite friends and family, and manage items together in real time. Each list supports roles, visibility settings, and colour themes so every list feels personal.
 
-The app is designed to feel native on mobile — installable as a PWA, with a bottom navigation dock, smooth transitions, and a warm, considered visual style — while remaining fully functional on desktop.
+The app is designed to feel native on mobile, installable as a PWA with a bottom navigation dock, smooth transitions, and a warm, considered visual style, while remaining fully functional on desktop.
 
 ## Feature Highlights
 
-- **Collaborative lists** with role-based access — owners, members, and viewers each get the right level of control.
+- **Collaborative lists** with role-based access: owners, members, and viewers each get the right level of control.
 - **Item management** with quantities, URLs, check-off, inline editing, sorting, and pagination.
-- **Invite system** with email-based invites, role selection, and accept/decline flows. Invites work even if the recipient doesn't have an account yet — they receive a sign-up link and the invite is linked automatically once they verify their email.
-- **8 colour themes per list** — rose, sage, ocean, lavender, sunset, slate, forest, and default — cascading across backgrounds, cards, text, and accent colours.
+- **Invite system** with email-based invites, role selection, and accept/decline flows. Invites work even if the recipient does not have an account yet; they receive a sign-up link and the invite is linked automatically once they verify their email.
+- **8 colour themes per list** (rose, sage, ocean, lavender, sunset, slate, forest, and default) cascading across backgrounds, cards, text, and accent colours.
 - **Authentication** with JWT access tokens, httpOnly refresh cookies, email verification, forgot/reset password, and rate limiting.
-- **Account management** — display name, email change with verification, password change, sign out all devices, and account deletion.
+- **Account management** including display name, email change with verification, password change, sign out all devices, and account deletion.
 - **Transactional email** via Resend for welcome, email verification, email change alerts, and password reset.
-- **PWA support** — installable on iOS and Android with a custom app icon, standalone display, and offline service worker.
-- **SEO** — per-page metadata, Open Graph tags, `robots.txt`, and `sitemap.xml`.
+- **PWA support** installable on iOS and Android with a custom app icon, standalone display, and offline service worker.
+- **SEO** with per-page metadata, Open Graph tags, `robots.txt`, and `sitemap.xml`.
 - **Responsive design** with a desktop header nav and a mobile bottom dock, smooth page transitions, and skeleton loading states.
 
 ## Tech Stack
@@ -62,10 +62,10 @@ web/                         Next.js frontend
     (auth)/                  Login, register, forgot/reset password, email verification
     (app)/
       dashboard/             List overview with item counts and roles
-      lists/[id]/            List detail — items, members, settings, themes
+      lists/[id]/            List detail, items, members, settings, themes
       invites/               Sent and received invite management
       settings/              Profile, email, password, danger zone
-    components/              Shared UI — alerts, avatars, dialogs, selects
+    components/              Shared UI, alerts, avatars, dialogs, selects
     contexts/                Auth context with token refresh
     lib/api.ts               Typed API client
     manifest.ts              PWA manifest
@@ -79,7 +79,7 @@ api/                         Express backend
     middleware/              Auth, rate limiting
     prisma/
       schema.prisma          Data model
-      seed.ts                Dev seed — 10 users, 91 lists, 3000+ items
+      seed.ts                Dev seed, 10 users, 91 lists, 3000+ items
 ```
 
 ## Core Routes
@@ -92,7 +92,7 @@ api/                         Express backend
 | `/reset-password`  | Set new password via token             |
 | `/verify-email`    | Email verification via token           |
 | `/dashboard`       | All lists with item counts and roles   |
-| `/lists/:id`       | List detail — items, members, settings |
+| `/lists/:id`       | List detail, items, members, settings  |
 | `/invites`         | Manage sent and received invites       |
 | `/settings`        | Account settings and danger zone       |
 
