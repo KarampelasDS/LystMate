@@ -13,9 +13,16 @@ const app = express();
 
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, process.env.FRONTEND_URL.replace("://www.", "://"), process.env.FRONTEND_URL.replace("://", "://www.")]
+  : ["http://localhost:3000"];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
   }),
