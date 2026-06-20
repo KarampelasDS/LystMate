@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { auth } from "@/app/lib/api";
+import { Alert } from "@/app/components/alert";
 
 export default function ResetPasswordPage({
   searchParams,
@@ -72,10 +73,11 @@ export default function ResetPasswordPage({
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
+                maxLength={128}
                 className="w-full border border-warm-border rounded-xl px-4 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
               />
             </div>
-            {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+            {error && <Alert message={error} onDismiss={() => setError("")} />}
             <button
               type="submit"
               disabled={loading}

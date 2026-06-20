@@ -2,12 +2,16 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   HiOutlinePlus, HiOutlinePencil, HiOutlineXMark,
   HiOutlineArrowTopRightOnSquare, HiOutlineUserMinus,
   HiOutlineTrash, HiOutlineArrowRightOnRectangle,
+  HiOutlineChevronLeft,
 } from "react-icons/hi2";
 import { FaceAvatar } from "@/app/components/face-avatar";
+import { CustomSelect } from "@/app/components/custom-select";
+import { Alert } from "@/app/components/alert";
 import { useAuth } from "@/app/contexts/auth-context";
 import { lists, items, invites, type List, type Item, type Member } from "@/app/lib/api";
 
@@ -58,6 +62,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [newItemQty, setNewItemQty] = useState(1);
   const [addingItem, setAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [sort, setSort] = useState<"default" | "name" | "unchecked">("default");
 
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -178,12 +183,14 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
   async function handleRename(e: React.FormEvent) {
     e.preventDefault(); setRenameMsg("");
+    if (renameName.trim() === list?.name) return;
     try { const u = await lists.rename(id, renameName); setList(u); setRenameMsg("Renamed."); }
     catch (err) { setRenameMsg(err instanceof Error ? err.message : "Failed"); }
   }
 
   async function handleVisibility(e: React.FormEvent) {
     e.preventDefault(); setVisMsg("");
+    if (visibility === list?.visibility) return;
     try { const u = await lists.changeVisibility(id, visibility); setList(u); setVisMsg("Updated."); }
     catch (err) { setVisMsg(err instanceof Error ? err.message : "Failed"); }
   }
@@ -226,15 +233,23 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       tab === t ? "bg-espresso text-warm-white" : "text-warm-brown hover:text-espresso hover:bg-cream"
     }`;
 
-  const inputClass = "w-full border border-warm-border rounded-xl px-3 py-2 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
-  const btnPrimary = "bg-espresso text-warm-white text-sm px-4 py-2 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
-  const btnSecondary = "border border-warm-border text-warm-brown text-sm px-4 py-2 rounded-xl hover:border-warm-muted hover:text-espresso active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
+  const inputClass = "w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
+  const btnPrimary = "bg-espresso text-warm-white text-base sm:text-sm px-4 py-2.5 sm:py-2 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
+  const btnSecondary = "border border-warm-border text-warm-brown text-base sm:text-sm px-4 py-2.5 sm:py-2 rounded-xl hover:border-warm-muted hover:text-espresso active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-0">
-        <div>
-          <h1 className="font-serif italic text-3xl sm:text-4xl text-espresso leading-tight">{list.name}</h1>
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-1 text-sm text-warm-muted hover:text-espresso transition-colors duration-150 mb-3 active:scale-95"
+      >
+        <HiOutlineChevronLeft className="w-4 h-4" />
+        Your lists
+      </Link>
+
+      <div className="flex items-start justify-between mb-0 min-w-0 gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-serif italic text-3xl sm:text-4xl text-espresso leading-tight truncate">{list.name}</h1>
           <p className="text-xs text-warm-muted mt-0.5">
             {list.visibility === "PUBLIC" ? "public" : "private"} · {(myRole ?? "viewer").toLowerCase()}
           </p>
@@ -251,7 +266,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         )}
       </div>
 
-      {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-4 py-2 mb-3">{error}</p>}
+      {error && <div className="mb-3"><Alert message={error} onDismiss={() => setError("")} /></div>}
 
       <div className="flex gap-1 mb-4 mt-3 border-b border-warm-border pb-2.5">
         <button className={tabClass("items")} onClick={() => setTab("items")}>Items</button>
@@ -262,88 +277,145 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       {/* ITEMS */}
       {tab === "items" && (
         <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden mb-4">
+          {/* toolbar */}
+          {!itemsLoading && (itemList.length > 0 || addingItem) && (
+            <div className="flex items-center justify-between px-5 py-2.5 border-b border-warm-border bg-cream/60">
+              <div className="flex items-center gap-1.5">
+                {canWrite && !addingItem && (
+                  <button
+                    onClick={() => setAddingItem(true)}
+                    className="flex items-center gap-1.5 bg-espresso text-warm-white text-sm px-3.5 py-2 sm:py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none"
+                  >
+                    <HiOutlinePlus className="w-4 h-4" />
+                    Add item
+                  </button>
+                )}
+              </div>
+              <CustomSelect
+                size="sm"
+                value={sort}
+                onChange={(v) => setSort(v as typeof sort)}
+                options={[{ value: "default", label: "Order added" }, { value: "name", label: "Name A–Z" }, { value: "unchecked", label: "Unchecked first" }]}
+              />
+            </div>
+          )}
+
           {itemsLoading ? (
             <div className="px-5 py-1"><SkeletonItems /></div>
           ) : itemList.length === 0 && !addingItem ? (
-            <div className="px-5 py-6 text-center">
-              <p className="font-serif italic text-warm-brown">Nothing here yet…</p>
+            <div className="px-5 py-8 text-center">
+              <p className="font-serif italic text-warm-muted text-sm mb-4">Nothing here yet…</p>
+              {canWrite && (
+                <button
+                  onClick={() => setAddingItem(true)}
+                  className="inline-flex items-center gap-2 bg-espresso text-warm-white text-sm px-5 py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none"
+                >
+                  <HiOutlinePlus className="w-4 h-4" />
+                  Add your first item
+                </button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-warm-border">
-              {itemList.map((item) =>
+              {/* add form pinned to top */}
+              {canWrite && addingItem && (
+                <form onSubmit={handleAddItem} className="px-5 py-4 bg-cream space-y-3">
+                  <div>
+                    <input
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      required maxLength={255}
+                      placeholder="Item name…"
+                      autoFocus
+                      className="w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2.5 text-base sm:text-sm bg-warm-white font-serif italic placeholder:not-italic placeholder:font-sans focus:outline-none focus:border-espresso transition-colors"
+                    />
+                    <p className="text-xs text-warm-muted text-right mt-1">{newItemName.length} / 255</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-warm-muted mb-1">URL (optional)</label>
+                      <input type="url" value={newItemUrl} onChange={(e) => setNewItemUrl(e.target.value.slice(0, 2048))} placeholder="https://…" maxLength={2048}
+                        className="w-full border border-warm-border rounded-xl px-3 py-2 text-sm bg-warm-white focus:outline-none focus:border-espresso transition-colors" />
+                      <p className="text-xs text-warm-muted text-right mt-1">{newItemUrl.length} / 2048</p>
+                    </div>
+                    <div className="w-20">
+                      <label className="block text-xs text-warm-muted mb-1">Qty</label>
+                      <input type="number" value={newItemQty} onChange={(e) => setNewItemQty(Number(e.target.value))} min={1} max={9999}
+                        className="w-full border border-warm-border rounded-xl px-3 py-2 text-sm bg-warm-white focus:outline-none focus:border-espresso transition-colors" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 bg-espresso text-warm-white text-sm py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Add item</button>
+                    <button type="button" onClick={() => { setAddingItem(false); setNewItemName(""); setNewItemUrl(""); setNewItemQty(1); }} className="px-4 text-sm text-warm-brown border border-warm-border rounded-xl hover:bg-warm-white active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
+                  </div>
+                </form>
+              )}
+              {[...itemList]
+                .sort((a, b) => {
+                  if (sort === "name") return a.name.localeCompare(b.name);
+                  if (sort === "unchecked") return Number(a.checked) - Number(b.checked);
+                  return 0;
+                })
+                .map((item) =>
                 editingItem?.id === item.id ? (
-                  <form key={item.id} onSubmit={handleUpdateItem} className="px-5 py-3 flex flex-wrap gap-2 items-center bg-cream">
-                    <input
-                      value={editingItem.name}
-                      onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                      required
-                      className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white flex-1 min-w-32 font-serif italic focus:outline-none focus:border-espresso"
-                    />
-                    <input
-                      type="number"
-                      value={editingItem.quantity}
-                      onChange={(e) => setEditingItem({ ...editingItem, quantity: Number(e.target.value) })}
-                      min={1} max={9999}
-                      className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white w-16 focus:outline-none focus:border-espresso"
-                    />
-                    <input
-                      type="url"
-                      value={editingItem.url ?? ""}
-                      onChange={(e) => setEditingItem({ ...editingItem, url: e.target.value || null })}
-                      placeholder="URL"
-                      className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white flex-1 min-w-32 focus:outline-none focus:border-espresso"
-                    />
-                    <button type="submit" className="text-xs bg-espresso text-warm-white px-3 py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none">Save</button>
-                    <button type="button" onClick={() => setEditingItem(null)} className="text-xs text-warm-brown hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
+                  <form key={item.id} onSubmit={handleUpdateItem} className="px-5 py-4 bg-cream space-y-3">
+                    <div>
+                      <input value={editingItem.name} onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })} required maxLength={255}
+                        placeholder="Item name…"
+                        className="w-full border border-warm-border rounded-xl px-3 py-2.5 text-sm bg-warm-white font-serif italic placeholder:not-italic placeholder:font-sans focus:outline-none focus:border-espresso transition-colors" />
+                      <p className="text-xs text-warm-muted text-right mt-1">{editingItem.name.length} / 255</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs text-warm-muted mb-1">URL (optional)</label>
+                        <input type="url" value={editingItem.url ?? ""} onChange={(e) => setEditingItem({ ...editingItem, url: e.target.value.slice(0, 2048) || null })} placeholder="https://…" maxLength={2048}
+                          className="w-full border border-warm-border rounded-xl px-3 py-2 text-sm bg-warm-white focus:outline-none focus:border-espresso transition-colors" />
+                        <p className="text-xs text-warm-muted text-right mt-1">{(editingItem.url ?? "").length} / 2048</p>
+                      </div>
+                      <div className="w-20">
+                        <label className="block text-xs text-warm-muted mb-1">Qty</label>
+                        <input type="number" value={editingItem.quantity} onChange={(e) => setEditingItem({ ...editingItem, quantity: Number(e.target.value) })} min={1} max={9999}
+                          className="w-full border border-warm-border rounded-xl px-3 py-2 text-sm bg-warm-white focus:outline-none focus:border-espresso transition-colors" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="submit" className="flex-1 bg-espresso text-warm-white text-sm py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Save</button>
+                      <button type="button" onClick={() => setEditingItem(null)} className="px-4 text-sm text-warm-brown border border-warm-border rounded-xl hover:bg-warm-white active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
+                    </div>
                   </form>
                 ) : (
-                  <div key={item.id} className="flex items-center px-5 py-3.5 hover:bg-cream active:bg-warm-border transition-colors duration-150 group gap-3">
+                  <div
+                    key={item.id}
+                    onClick={() => canWrite && handleToggle(item)}
+                    className={`flex items-center px-5 py-3.5 hover:bg-cream transition-colors duration-150 group gap-3 ${canWrite ? "cursor-pointer" : ""}`}
+                  >
                     {canWrite ? (
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={() => handleToggle(item)}
-                        className="accent-espresso w-4 h-4 shrink-0 cursor-pointer rounded"
-                      />
+                      <input type="checkbox" checked={item.checked} onChange={() => handleToggle(item)} onClick={(e) => e.stopPropagation()} className="accent-espresso w-4 h-4 shrink-0 cursor-pointer rounded" />
                     ) : (
                       <span className={`w-4 h-4 shrink-0 rounded border border-warm-border flex items-center justify-center text-xs ${item.checked ? "bg-espresso border-espresso" : ""}`}>
                         {item.checked && <span className="text-warm-white text-[10px]">✓</span>}
                       </span>
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className={`font-serif italic ${item.checked ? "line-through text-warm-muted" : "text-espresso"}`}>
-                        {item.quantity > 1 && (
-                          <span className="not-italic font-sans text-xs font-medium text-warm-brown mr-1.5">{item.quantity}×</span>
-                        )}
+                      <p className={`font-serif italic text-base sm:text-sm truncate ${item.checked ? "line-through text-warm-muted" : "text-espresso"}`}>
+                        {item.quantity > 1 && <span className="not-italic font-sans text-sm sm:text-xs font-medium text-warm-brown mr-1.5">{item.quantity}×</span>}
                         {item.name}
-                      </span>
+                      </p>
                       {item.url && (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-0.5 text-xs text-warm-muted hover:text-espresso hover:underline truncate mt-0.5 transition-colors w-fit"
-                        >
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-0.5 text-xs text-warm-muted hover:text-espresso hover:underline mt-0.5 transition-colors min-w-0 max-w-full">
                           <HiOutlineArrowTopRightOnSquare className="w-3 h-3 shrink-0" />
                           <span className="truncate">{item.url}</span>
                         </a>
                       )}
                     </div>
                     {canWrite && (
-                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0">
-                        <button
-                          onClick={() => setEditingItem(item)}
-                          title="Edit"
-                          className="p-1.5 text-warm-muted hover:text-espresso hover:bg-warm-border rounded-lg active:scale-90 transition-all duration-150 cursor-pointer"
-                        >
-                          <HiOutlinePencil className="w-3.5 h-3.5" />
+                      <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setEditingItem(item)} title="Edit" className="p-2 text-warm-muted hover:text-espresso hover:bg-warm-border rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
+                          <HiOutlinePencil className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDeleteItem(item.id)}
-                          title="Remove"
-                          className="p-1.5 text-warm-muted hover:text-red-700 hover:bg-red-50 rounded-lg active:scale-90 transition-all duration-150 cursor-pointer"
-                        >
-                          <HiOutlineXMark className="w-3.5 h-3.5" />
+                        <button onClick={() => handleDeleteItem(item.id)} title="Remove" className="p-2 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-lg active:scale-90 transition-all duration-150 cursor-pointer">
+                          <HiOutlineXMark className="w-4 h-4" />
                         </button>
                       </div>
                     )}
@@ -351,46 +423,6 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                 )
               )}
             </div>
-          )}
-
-          {canWrite && (
-            addingItem ? (
-              <form onSubmit={handleAddItem} className={`flex flex-wrap gap-2 items-center px-5 py-3 bg-cream ${itemList.length > 0 ? "border-t border-warm-border" : ""}`}>
-                <input
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  required
-                  maxLength={255}
-                  placeholder="Item name…"
-                  autoFocus
-                  className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white flex-1 min-w-32 font-serif italic placeholder:not-italic placeholder:font-sans focus:outline-none focus:border-espresso"
-                />
-                <input
-                  type="number"
-                  value={newItemQty}
-                  onChange={(e) => setNewItemQty(Number(e.target.value))}
-                  min={1} max={9999}
-                  className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white w-16 focus:outline-none focus:border-espresso"
-                />
-                <input
-                  type="url"
-                  value={newItemUrl}
-                  onChange={(e) => setNewItemUrl(e.target.value)}
-                  placeholder="URL (optional)"
-                  className="border border-warm-border rounded-lg px-2 py-1.5 text-sm bg-warm-white flex-1 min-w-32 focus:outline-none focus:border-espresso"
-                />
-                <button type="submit" className="text-xs bg-espresso text-warm-white px-3 py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none">Add</button>
-                <button type="button" onClick={() => setAddingItem(false)} className="text-xs text-warm-brown hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
-              </form>
-            ) : (
-              <button
-                onClick={() => setAddingItem(true)}
-                className={`w-full flex items-center gap-1.5 px-5 py-3 text-sm text-warm-muted hover:text-warm-brown hover:bg-cream active:bg-warm-border transition-all duration-150 cursor-pointer ${itemList.length > 0 ? "border-t border-warm-border" : ""}`}
-              >
-                <HiOutlinePlus className="w-4 h-4" />
-                <span className="font-serif italic">Add an item…</span>
-              </button>
-            )
           )}
         </div>
       )}
@@ -404,18 +436,20 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
               <form onSubmit={handleSendInvite} className="flex gap-2 items-end flex-wrap">
                 <div className="flex-1 min-w-40">
                   <label className="block text-xs font-medium text-warm-brown mb-1 uppercase tracking-wide">Email</label>
-                  <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required placeholder="friend@example.com" className={inputClass} />
+                  <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value.slice(0, 254))} required maxLength={254} placeholder="friend@example.com" className={inputClass} />
+                  <p className="text-xs text-warm-muted text-right mt-1">{inviteEmail.length} / 254</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-warm-brown mb-1 uppercase tracking-wide">Role</label>
-                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as "VIEWER" | "MEMBER")} className="border border-warm-border rounded-xl px-3 py-2 text-sm bg-cream focus:outline-none">
-                    <option value="VIEWER">Viewer</option>
-                    <option value="MEMBER">Member</option>
-                  </select>
+                  <CustomSelect
+                    value={inviteRole}
+                    onChange={(v) => setInviteRole(v as "VIEWER" | "MEMBER")}
+                    options={[{ value: "VIEWER", label: "Viewer" }, { value: "MEMBER", label: "Member" }]}
+                  />
                 </div>
                 <button type="submit" className={btnPrimary}>Invite</button>
               </form>
-              {inviteMsg && <p className="text-xs mt-2 text-warm-brown">{inviteMsg}</p>}
+              {inviteMsg && <div className="mt-2"><Alert message={inviteMsg} onDismiss={() => setInviteMsg("")} variant="info" /></div>}
             </div>
           )}
 
@@ -425,23 +459,20 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
             ) : (
               <div className="divide-y divide-warm-border">
                 {members.map((m) => (
-                  <div key={m.id} className="flex items-center px-5 py-3 gap-3">
-                    <FaceAvatar name={m.user.name} size={28} className="rounded-full overflow-hidden" />
-                    <div className="flex-1">
-                      <p className="text-sm text-espresso">{m.user.name}</p>
+                  <div key={m.id} className="flex items-center px-5 py-3 gap-3 min-w-0">
+                    <FaceAvatar name={m.user.name} size={28} className="rounded-full overflow-hidden shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-espresso truncate">{m.user.name}</p>
                       <p className="text-xs text-warm-muted capitalize">{m.role.toLowerCase()}</p>
                     </div>
                     {isOwner && m.userId !== user?.id && (
                       <div className="flex items-center gap-2">
-                        <select
+                        <CustomSelect
+                          size="sm"
                           value={m.role === "OWNER" ? "MEMBER" : m.role}
-                          onChange={(e) => handleUpdateRole(m.userId, e.target.value as "MEMBER" | "VIEWER")}
-                          disabled={m.role === "OWNER"}
-                          className="text-xs border border-warm-border rounded-lg px-2 py-1.5 bg-cream disabled:opacity-50"
-                        >
-                          <option value="MEMBER">Member</option>
-                          <option value="VIEWER">Viewer</option>
-                        </select>
+                          onChange={(v) => handleUpdateRole(m.userId, v as "MEMBER" | "VIEWER")}
+                          options={[{ value: "MEMBER", label: "Member" }, { value: "VIEWER", label: "Viewer" }]}
+                        />
                         <button
                           onClick={() => handleRemoveMember(m.userId)}
                           title="Remove member"
@@ -464,23 +495,27 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
         <div className="space-y-4">
           <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
             <h2 className="font-serif text-base mb-3">Rename</h2>
-            <form onSubmit={handleRename} className="flex gap-2">
-              <input value={renameName} onChange={(e) => setRenameName(e.target.value)} required maxLength={100} className={`${inputClass} flex-1`} />
-              <button type="submit" className={btnPrimary}>Save</button>
+            <form onSubmit={handleRename} className="flex gap-2 items-start">
+              <div className="flex-1">
+                <input value={renameName} onChange={(e) => setRenameName(e.target.value)} required maxLength={100} className={`${inputClass} w-full`} />
+                <p className="text-xs text-warm-muted text-right mt-1">{renameName.length} / 100</p>
+              </div>
+              <button type="submit" disabled={renameName.trim() === list?.name} className={btnPrimary}>Save</button>
             </form>
-            {renameMsg && <p className="text-xs mt-2 text-warm-brown">{renameMsg}</p>}
+            {renameMsg && <div className="mt-2"><Alert message={renameMsg} onDismiss={() => setRenameMsg("")} variant="info" /></div>}
           </div>
 
           <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
             <h2 className="font-serif text-base mb-3">Visibility</h2>
             <form onSubmit={handleVisibility} className="flex gap-2 items-center">
-              <select value={visibility} onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "PRIVATE")} className="border border-warm-border rounded-xl px-3 py-2 text-sm bg-cream focus:outline-none">
-                <option value="PRIVATE">Private</option>
-                <option value="PUBLIC">Public</option>
-              </select>
-              <button type="submit" className={btnPrimary}>Save</button>
+              <CustomSelect
+                value={visibility}
+                onChange={(v) => setVisibility(v as "PUBLIC" | "PRIVATE")}
+                options={[{ value: "PRIVATE", label: "Private" }, { value: "PUBLIC", label: "Public" }]}
+              />
+              <button type="submit" disabled={visibility === list?.visibility} className={btnPrimary}>Save</button>
             </form>
-            {visMsg && <p className="text-xs mt-2 text-warm-brown">{visMsg}</p>}
+            {visMsg && <div className="mt-2"><Alert message={visMsg} onDismiss={() => setVisMsg("")} variant="info" /></div>}
           </div>
 
           <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
@@ -490,25 +525,21 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
               <p className="text-xs text-warm-muted italic">No other members to transfer to yet.</p>
             ) : (
               <form onSubmit={handleTransfer} className="flex gap-2">
-                <select
+                <CustomSelect
                   value={transferId}
-                  onChange={(e) => setTransferId(e.target.value)}
-                  required
-                  className="border border-warm-border rounded-xl px-3 py-2 text-sm bg-cream focus:outline-none focus:border-espresso flex-1 transition-colors duration-150"
-                >
-                  <option value="">Select a member…</option>
-                  {members
-                    .filter((m) => m.role !== "OWNER")
-                    .map((m) => (
-                      <option key={m.userId} value={m.userId}>
-                        {m.user.name} ({m.role.toLowerCase()})
-                      </option>
-                    ))}
-                </select>
+                  onChange={(v) => setTransferId(v)}
+                  className="flex-1"
+                  options={[
+                    { value: "", label: "Select a member…" },
+                    ...members
+                      .filter((m) => m.role !== "OWNER")
+                      .map((m) => ({ value: m.userId, label: `${m.user.name} (${m.role.toLowerCase()})` })),
+                  ]}
+                />
                 <button type="submit" className={btnSecondary}>Transfer</button>
               </form>
             )}
-            {transferMsg && <p className="text-xs mt-2 text-warm-brown">{transferMsg}</p>}
+            {transferMsg && <div className="mt-2"><Alert message={transferMsg} onDismiss={() => setTransferMsg("")} variant="info" /></div>}
           </div>
 
           <div className="bg-warm-white border border-red-200 rounded-2xl p-4">

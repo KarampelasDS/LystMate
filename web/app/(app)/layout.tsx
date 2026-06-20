@@ -7,7 +7,8 @@ import {
   HiOutlineClipboardDocumentList, HiClipboardDocumentList,
   HiOutlineEnvelope, HiEnvelope,
   HiOutlineCog6Tooth, HiCog6Tooth,
-  HiArrowRightOnRectangle,
+  HiArrowRightOnRectangle, HiOutlineUserCircle,
+  HiShoppingBag,
 } from "react-icons/hi2";
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { useAuth } from "@/app/contexts/auth-context";
@@ -42,13 +43,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col">
       {/* desktop header */}
-      <header className="bg-warm-white border-b border-warm-border px-5 flex items-center justify-between sticky top-0 z-10 h-14">
+      <header className="bg-warm-white border-b border-warm-border px-6 flex items-center justify-between sticky top-0 z-10 h-16">
         <div className="flex items-center h-full gap-8">
           <Link
             href="/dashboard"
-            className="font-serif text-xl text-espresso leading-none hover:text-espresso-light transition-colors select-none"
+            className="flex items-center gap-2 select-none group"
           >
-            LystMate
+            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shrink-0" style={{ background: "#D7A679" }}>
+              <HiShoppingBag className="w-6 h-6 text-warm-white" />
+            </div>
+            <span className="font-serif text-2xl text-espresso leading-none">LystMate</span>
           </Link>
 
           <nav className="hidden sm:flex items-center h-full gap-1">
@@ -59,11 +63,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
-                  className={`relative flex items-center gap-2 px-3 h-full text-sm select-none transition-colors duration-150 ${
+                  className={`relative flex items-center gap-2 px-4 h-full text-base select-none transition-colors duration-150 ${
                     active ? "text-espresso font-medium" : "text-warm-brown hover:text-espresso"
                   }`}
                 >
-                  <Ic className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
+                  <Ic className="w-5 h-5 transition-transform duration-150 group-hover:scale-110" />
                   {label}
                   {active && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-espresso rounded-t-full" />
@@ -74,30 +78,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        {/* mobile right — avatar + current section label */}
+        {/* mobile right — avatar */}
         <Link href="/settings" className="sm:hidden flex items-center gap-2 active:opacity-70 transition-opacity">
-          <div className="text-right">
-            <p className="text-xs font-medium text-espresso leading-none">
-              {navLinks.find((l) => pathname.startsWith(l.href))?.label ?? ""}
-            </p>
-            <p className="text-[10px] text-warm-muted mt-0.5 leading-none">{user.name}</p>
-          </div>
-          <FaceAvatar name={user.name} size={32} className="rounded-full overflow-hidden" />
+          <p className="text-xs text-warm-muted truncate max-w-[100px]">{user.name}</p>
+          <FaceAvatar name={user.name} size={38} className="rounded-full overflow-hidden" />
         </Link>
 
         <div className="hidden sm:flex items-center gap-3">
           <Link href="/settings" className="flex items-center gap-2 group cursor-pointer">
             <span className="transition-transform duration-150 group-hover:scale-105">
-              <FaceAvatar name={user.name} size={30} className="rounded-full overflow-hidden" />
+              <FaceAvatar name={user.name} size={34} className="rounded-full overflow-hidden" />
             </span>
-            <span className="text-xs text-warm-muted group-hover:text-espresso transition-colors duration-150">{user.name}</span>
+            <span className="text-sm text-warm-muted group-hover:text-espresso transition-colors duration-150 truncate max-w-[120px]">{user.name}</span>
           </Link>
-          <div className="w-px h-4 bg-warm-border" />
+          <div className="w-px h-5 bg-warm-border" />
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-warm-brown hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer select-none"
+            className="flex items-center gap-1.5 text-sm text-warm-brown hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer select-none"
           >
-            <HiArrowRightOnRectangle className="w-4 h-4" />
+            <HiArrowRightOnRectangle className="w-5 h-5" />
             Sign out
           </button>
         </div>

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineEnvelope } from "react-icons/hi2";
+import { CustomSelect } from "@/app/components/custom-select";
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { invites, type Invite } from "@/app/lib/api";
+import { Alert } from "@/app/components/alert";
 
 function SkeletonInvites() {
   return (
@@ -30,6 +32,7 @@ export default function InvitesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [sort, setSort] = useState<"default" | "name" | "role">("default");
 
   async function load() {
     setLoading(true);
@@ -65,8 +68,8 @@ export default function InvitesPage() {
         )}
       </div>
 
-      {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-4 py-2 mb-4">{error}</p>}
-      {msg && <p className="text-sm text-warm-brown mb-4">{msg}</p>}
+      {error && <div className="mb-4"><Alert message={error} onDismiss={() => setError("")} /></div>}
+      {msg && <div className="mb-4"><Alert message={msg} onDismiss={() => setMsg("")} variant="info" /></div>}
 
       <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden">
         {loading ? (
@@ -79,10 +82,26 @@ export default function InvitesPage() {
           </div>
         ) : (
           <div className="divide-y divide-warm-border">
-            {data.map((invite) => (
+            {data.length > 1 && (
+              <div className="flex items-center justify-end px-4 py-2 border-b border-warm-border bg-cream/60">
+                <CustomSelect
+                  size="sm"
+                  value={sort}
+                  onChange={(v) => setSort(v as typeof sort)}
+                  options={[{ value: "default", label: "Order added" }, { value: "name", label: "Name A–Z" }, { value: "role", label: "Role" }]}
+                />
+              </div>
+            )}
+            {[...data]
+              .sort((a, b) => {
+                if (sort === "name") return a.list.name.localeCompare(b.list.name);
+                if (sort === "role") return a.role.localeCompare(b.role);
+                return 0;
+              })
+              .map((invite) => (
               <div key={invite.id} className="flex items-center px-5 py-3.5 gap-4 hover:bg-cream transition-colors duration-150">
                 <FaceAvatar name={invite.list.name} size={32} className="rounded-full overflow-hidden" />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <p className="font-serif italic text-espresso truncate">{invite.list.name}</p>
                   <p className="text-xs text-warm-muted mt-0.5">
                     as <span className="capitalize">{invite.role.toLowerCase()}</span>
@@ -91,14 +110,14 @@ export default function InvitesPage() {
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleRespond(invite.id, "ACCEPTED")}
-                    className="flex items-center gap-1 text-xs bg-espresso text-warm-white px-3 py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none"
+                    className="flex items-center gap-1 text-sm sm:text-xs bg-espresso text-warm-white px-3.5 py-2 sm:py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none"
                   >
                     <HiOutlineCheckCircle className="w-3.5 h-3.5" />
                     Accept
                   </button>
                   <button
                     onClick={() => handleRespond(invite.id, "REJECTED")}
-                    className="flex items-center gap-1 text-xs border border-warm-border text-warm-brown px-3 py-1.5 rounded-lg hover:border-warm-muted hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer select-none"
+                    className="flex items-center gap-1 text-sm sm:text-xs border border-warm-border text-warm-brown px-3.5 py-2 sm:py-1.5 rounded-lg hover:border-warm-muted hover:text-espresso active:scale-95 transition-all duration-150 cursor-pointer select-none"
                   >
                     <HiOutlineXCircle className="w-3.5 h-3.5" />
                     Decline

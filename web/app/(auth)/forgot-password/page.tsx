@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { auth } from "@/app/lib/api";
+import { Alert } from "@/app/components/alert";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -51,12 +52,13 @@ export default function ForgotPasswordPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value.slice(0, 254))}
                 required
+                maxLength={254}
                 className="w-full border border-warm-border rounded-xl px-4 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors"
               />
             </div>
-            {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+            {error && <Alert message={error} onDismiss={() => setError("")} />}
             <button
               type="submit"
               disabled={loading}

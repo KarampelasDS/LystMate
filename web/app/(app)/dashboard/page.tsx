@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HiOutlinePlus, HiOutlineChevronRight } from "react-icons/hi2";
+import { HiOutlinePlus, HiOutlineChevronRight, HiCheck } from "react-icons/hi2";
+import { CustomSelect } from "@/app/components/custom-select";
 import { useAuth } from "@/app/contexts/auth-context";
+import { Alert } from "@/app/components/alert";
 import { lists, type List } from "@/app/lib/api";
 
 function SkeletonList() {
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const [newName, setNewName] = useState("");
   const [newVisibility, setNewVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
   const [formError, setFormError] = useState("");
+  const [sort, setSort] = useState<"default" | "name">("default");
 
   async function load() {
     setLoading(true);
@@ -60,14 +63,11 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="font-serif text-2xl sm:text-4xl text-espresso leading-tight">
-            Hey, {user?.name} 👋
+      <div className="flex items-center justify-between mb-4 gap-3 min-w-0">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-serif text-2xl sm:text-4xl text-espresso leading-tight truncate">
+            Hey, {user?.name} <span className="wave-emoji">👋</span>
           </h1>
-          <p className="text-warm-brown text-sm mt-0.5">
-            {loading ? "" : `${data.length} list${data.length !== 1 ? "s" : ""}`}
-          </p>
         </div>
         <button
           onClick={() => setCreating((v) => !v)}
@@ -92,38 +92,56 @@ export default function DashboardPage() {
               maxLength={100}
               placeholder="e.g. Grocery run"
               autoFocus
-              className="w-full border border-warm-border rounded-xl px-3 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150 font-serif italic placeholder:not-italic placeholder:font-sans"
+              className="w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2.5 text-base sm:text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150 font-serif italic placeholder:not-italic placeholder:font-sans"
             />
+            <p className="text-xs text-warm-muted text-right mt-1">{newName.length} / 100</p>
           </div>
           <div className="flex gap-2">
-            {(["PRIVATE", "PUBLIC"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setNewVisibility(v)}
-                className={`flex-1 text-sm py-2.5 rounded-xl border transition-all duration-150 active:scale-95 cursor-pointer select-none ${
-                  newVisibility === v
-                    ? "bg-espresso text-warm-white border-transparent"
-                    : "border-warm-border text-warm-brown hover:border-warm-muted"
-                }`}
-              >
-                {v.charAt(0) + v.slice(1).toLowerCase()}
-              </button>
-            ))}
-            <button
-              type="submit"
-              className="flex-1 bg-espresso text-warm-white text-sm py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none"
-            >
-              Create
-            </button>
+            {(["PRIVATE", "PUBLIC"] as const).map((v) => {
+              const selected = newVisibility === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setNewVisibility(v)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-sm py-2.5 rounded-xl border transition-all duration-150 active:scale-95 cursor-pointer select-none ${
+                    selected
+                      ? "bg-warm-white border-espresso text-espresso font-medium"
+                      : "border-warm-border text-warm-muted hover:border-warm-brown hover:text-warm-brown"
+                  }`}
+                >
+                  {selected && <HiCheck className="w-3.5 h-3.5 shrink-0" />}
+                  {v.charAt(0) + v.slice(1).toLowerCase()}
+                </button>
+              );
+            })}
           </div>
+          <button
+            type="submit"
+            className="w-full bg-espresso text-warm-white text-base sm:text-sm py-3.5 sm:py-3 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none font-medium"
+          >
+            Create list
+          </button>
           {formError && <p className="text-xs text-red-700">{formError}</p>}
         </form>
       )}
 
-      {error && <p className="text-sm text-red-700 mb-4">{error}</p>}
+      {error && <div className="mb-4"><Alert message={error} onDismiss={() => setError("")} /></div>}
 
       <div className="bg-warm-white border border-warm-border rounded-2xl overflow-hidden">
+        {!loading && (
+          <div className="flex items-center justify-between px-5 py-2.5 border-b border-warm-border bg-cream/60">
+            <span className="text-sm font-medium text-espresso">Your lists <span className="text-warm-muted font-normal">· {data.length}</span></span>
+            {data.length > 1 && (
+              <CustomSelect
+                size="sm"
+                value={sort}
+                onChange={(v) => setSort(v as typeof sort)}
+                options={[{ value: "default", label: "Order added" }, { value: "name", label: "Name A–Z" }]}
+              />
+            )}
+          </div>
+        )}
         {loading ? (
           <div className="px-5 py-2">
             <SkeletonList />
@@ -135,16 +153,18 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="divide-y divide-warm-border">
-            {data.map((list) => (
+            {[...data]
+              .sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : 0)
+              .map((list) => (
               <Link
                 key={list.id}
                 href={`/lists/${list.id}`}
-                className="flex items-center px-5 py-5 hover:bg-cream active:bg-warm-border transition-colors duration-150 group cursor-pointer"
+                className="flex items-center px-5 py-5 hover:bg-cream active:bg-warm-border transition-colors duration-150 group cursor-pointer min-w-0"
               >
-                <div className="flex-1">
-                  <span className="font-serif italic text-2xl text-espresso group-hover:text-espresso-light transition-colors duration-150 leading-snug">
+                <div className="flex-1 min-w-0">
+                  <p className="font-serif italic text-2xl text-espresso group-hover:text-espresso-light transition-colors duration-150 leading-snug truncate">
                     {list.name}
-                  </span>
+                  </p>
                   <p className="text-xs text-warm-muted mt-0.5">
                     {list.visibility === "PUBLIC" ? "Public" : "Private"}
                   </p>

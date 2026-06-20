@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { HiOutlinePencil, HiOutlineEnvelope, HiOutlineDevicePhoneMobile, HiArrowRightOnRectangle } from "react-icons/hi2";
+import { HiOutlinePencil, HiOutlineEnvelope, HiOutlineExclamationTriangle, HiArrowRightOnRectangle } from "react-icons/hi2";
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { useAuth } from "@/app/contexts/auth-context";
 import { users, auth, setToken } from "@/app/lib/api";
+import { Alert } from "@/app/components/alert";
 
-const btn = "text-sm px-5 py-2.5 rounded-xl transition-all duration-150 active:scale-[0.97] cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed shrink-0";
+const btn = "text-base sm:text-sm px-5 py-3 sm:py-2.5 rounded-xl transition-all duration-150 active:scale-[0.97] cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed shrink-0";
 const btnPrimary = `${btn} bg-espresso text-warm-white hover:bg-espresso-light`;
-const inputClass = "w-full border border-warm-border rounded-xl px-3 py-2.5 text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
+const inputClass = "w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2.5 text-base sm:text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
 
 export default function SettingsPage() {
   const { user, setUser, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function SettingsPage() {
 
   async function handleUpdateName(e: React.FormEvent) {
     e.preventDefault();
+    if (name.trim() === user?.name) return;
     setNameMsg("");
     setNameLoading(true);
     try {
@@ -74,9 +76,9 @@ export default function SettingsPage() {
       {/* avatar card */}
       <div className="bg-warm-white border border-warm-border rounded-2xl p-6 mb-5 flex items-center gap-5">
         <FaceAvatar name={user?.name ?? ""} size={72} interactive className="rounded-2xl overflow-hidden" />
-        <div>
-          <p className="font-serif text-2xl text-espresso leading-tight">{user?.name}</p>
-          <p className="text-sm text-warm-muted mt-0.5">{user?.email}</p>
+        <div className="min-w-0">
+          <p className="font-serif text-2xl text-espresso leading-tight truncate">{user?.name}</p>
+          <p className="text-sm text-warm-muted mt-0.5 truncate">{user?.email}</p>
         </div>
       </div>
 
@@ -86,11 +88,14 @@ export default function SettingsPage() {
             <HiOutlinePencil className="w-4 h-4 text-warm-brown shrink-0" />
             Display name
           </h2>
-          <form onSubmit={handleUpdateName} className="flex gap-3">
-            <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} className={`${inputClass} flex-1`} />
-            <button type="submit" disabled={nameLoading} className={btnPrimary}>{nameLoading ? "Saving…" : "Save"}</button>
+          <form onSubmit={handleUpdateName} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} className={`${inputClass} w-full`} />
+              <p className="text-xs text-warm-muted text-right mt-1">{name.length} / 100</p>
+            </div>
+            <button type="submit" disabled={nameLoading || name.trim() === user?.name} className={btnPrimary}>{nameLoading ? "Saving…" : "Save"}</button>
           </form>
-          {nameMsg && <p className="text-xs mt-2 text-warm-brown">{nameMsg}</p>}
+          {nameMsg && <div className="mt-2"><Alert message={nameMsg} onDismiss={() => setNameMsg("")} variant="info" /></div>}
         </div>
 
         <div className="bg-warm-white border border-warm-border rounded-2xl p-5">
@@ -99,11 +104,14 @@ export default function SettingsPage() {
             Change email
           </h2>
           <p className="text-xs text-warm-muted mb-3">A verification link will be sent before the change takes effect.</p>
-          <form onSubmit={handleEmailChange} className="flex gap-3">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="new@example.com" className={`${inputClass} flex-1`} />
+          <form onSubmit={handleEmailChange} className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value.slice(0, 254))} required maxLength={254} placeholder="new@example.com" className={`${inputClass} w-full`} />
+              <p className="text-xs text-warm-muted text-right mt-1">{email.length} / 254</p>
+            </div>
             <button type="submit" disabled={emailLoading} className={btnPrimary}>{emailLoading ? "Sending…" : "Send"}</button>
           </form>
-          {emailMsg && <p className="text-xs mt-2 text-warm-brown">{emailMsg}</p>}
+          {emailMsg && <div className="mt-2"><Alert message={emailMsg} onDismiss={() => setEmailMsg("")} variant="info" /></div>}
         </div>
 
         <button
@@ -116,7 +124,7 @@ export default function SettingsPage() {
 
         <div className="bg-warm-white border border-red-200 rounded-2xl p-5">
           <h2 className="font-serif text-base text-red-700 mb-3 flex items-center gap-2">
-            <HiOutlineDevicePhoneMobile className="w-4 h-4 shrink-0" />
+            <HiOutlineExclamationTriangle className="w-4 h-4 shrink-0" />
             Danger zone
           </h2>
           <button
@@ -125,7 +133,7 @@ export default function SettingsPage() {
           >
             Sign out all devices
           </button>
-          {logoutAllMsg && <p className="text-xs mt-2 text-warm-brown">{logoutAllMsg}</p>}
+          {logoutAllMsg && <div className="mt-2"><Alert message={logoutAllMsg} onDismiss={() => setLogoutAllMsg("")} variant="info" /></div>}
         </div>
       </div>
     </div>
