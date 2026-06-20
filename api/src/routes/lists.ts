@@ -13,6 +13,7 @@ router.get("/:id/members", listsController.getMembers);
 router.delete("/:id", listsController.deleteList);
 router.patch("/:id/rename", listsController.renameList);
 router.patch("/:id/visibility", listsController.changeListVisibility);
+router.patch("/:id/theme", listsController.changeListTheme);
 router.delete("/:id/leave", listsController.leaveList);
 router.patch("/:id/transfer", listsController.transferOwnership);
 router.delete("/:id/members/:memberId", listsController.removeMember);

@@ -14,7 +14,7 @@ import { CustomSelect } from "@/app/components/custom-select";
 import { Alert } from "@/app/components/alert";
 import { ConfirmDialog } from "@/app/components/confirm-dialog";
 import { useAuth } from "@/app/contexts/auth-context";
-import { lists, items, invites, type List, type Item, type Member } from "@/app/lib/api";
+import { lists, items, invites, LIST_THEMES, type List, type Item, type Member, type ListTheme } from "@/app/lib/api";
 
 type Tab = "items" | "members" | "settings";
 
@@ -81,6 +81,8 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
   const [renameMsg, setRenameMsg] = useState("");
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PRIVATE");
   const [visMsg, setVisMsg] = useState("");
+  const [theme, setTheme] = useState<ListTheme>("default");
+  const [themeMsg, setThemeMsg] = useState("");
   const [transferId, setTransferId] = useState("");
   const [transferMsg, setTransferMsg] = useState("");
 
@@ -91,6 +93,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       setList(l);
       setRenameName(l.name);
       setVisibility(l.visibility);
+      setTheme(l.theme ?? "default");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load list");
     } finally {
@@ -131,6 +134,23 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     loadItems();
     loadMembers();
   }, [loadList, loadItems, loadMembers]);
+
+  const THEME_BG: Record<ListTheme, string> = {
+    default:  "",
+    rose:     "#fff0f3",
+    sage:     "#edf7ed",
+    ocean:    "#eaf4ff",
+    lavender: "#f0eeff",
+    sunset:   "#fff4ea",
+    slate:    "#f4f7fa",
+    forest:   "#edfbf1",
+  };
+
+  useEffect(() => {
+    const bg = THEME_BG[theme];
+    if (bg) document.body.style.backgroundColor = bg;
+    return () => { document.body.style.backgroundColor = ""; };
+  }, [theme]);
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
@@ -205,6 +225,18 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
     catch (err) { setVisMsg(err instanceof Error ? err.message : "Failed"); }
   }
 
+  async function handleTheme(t: ListTheme) {
+    setTheme(t);
+    setThemeMsg("");
+    try {
+      const u = await lists.changeTheme(id, t);
+      setList(u);
+      setThemeMsg("Theme saved.");
+    } catch (err) {
+      setThemeMsg(err instanceof Error ? err.message : "Failed");
+    }
+  }
+
   async function handleTransfer(e: React.FormEvent) {
     e.preventDefault(); setTransferMsg("");
     try {
@@ -249,22 +281,31 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
 
   if (!list) return <p className="text-sm text-red-700">{error || "List not found."}</p>;
 
-
-
   const isOwner = myRole === "OWNER";
   const canWrite = myRole === "OWNER" || myRole === "MEMBER";
 
+  const THEME_META: Record<ListTheme, { label: string; dot: string }> = {
+    default:  { label: "Default",  dot: "#2c1810" },
+    rose:     { label: "Rose",     dot: "#e11d48" },
+    sage:     { label: "Sage",     dot: "#15803d" },
+    ocean:    { label: "Ocean",    dot: "#0369a1" },
+    lavender: { label: "Lavender", dot: "#7c3aed" },
+    sunset:   { label: "Sunset",   dot: "#ea580c" },
+    slate:    { label: "Slate",    dot: "#334155" },
+    forest:   { label: "Forest",   dot: "#065f46" },
+  };
+
   const tabClass = (t: Tab) =>
     `px-4 py-2.5 sm:px-3 sm:py-1.5 text-base sm:text-sm rounded-xl sm:rounded-lg transition-all duration-150 active:scale-95 cursor-pointer select-none ${
-      tab === t ? "bg-espresso text-warm-white" : "text-warm-brown hover:text-espresso hover:bg-cream"
+      tab === t ? "bg-[var(--color-list-accent)] text-warm-white" : "text-warm-brown hover:text-espresso hover:bg-cream"
     }`;
 
   const inputClass = "w-full border border-warm-border rounded-xl px-3 py-3 sm:py-2 text-base sm:text-sm bg-cream focus:outline-none focus:border-espresso transition-colors duration-150";
-  const btnPrimary = "bg-espresso text-warm-white text-base sm:text-sm px-4 py-2.5 sm:py-2 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
+  const btnPrimary = "bg-[var(--color-list-accent)] text-warm-white text-base sm:text-sm px-4 py-2.5 sm:py-2 rounded-xl hover:opacity-90 active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
   const btnSecondary = "border border-warm-border text-warm-brown text-base sm:text-sm px-4 py-2.5 sm:py-2 rounded-xl hover:border-warm-muted hover:text-espresso active:scale-[0.97] transition-all duration-150 cursor-pointer select-none";
 
   return (
-    <div>
+    <div data-theme={theme === "default" ? undefined : theme} className="transition-colors duration-300">
       {confirm && (
         <ConfirmDialog
           message={confirm.message}
@@ -322,7 +363,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                 {canWrite && !addingItem ? (
                   <button
                     onClick={() => setAddingItem(true)}
-                    className="flex items-center gap-1.5 bg-espresso text-warm-white text-sm px-3.5 py-2 sm:py-1.5 rounded-lg hover:bg-espresso-light active:scale-95 transition-all duration-150 cursor-pointer select-none"
+                    className="flex items-center gap-1.5 bg-[var(--color-list-accent)] text-warm-white text-sm px-3.5 py-2 sm:py-1.5 rounded-lg hover:opacity-90 active:scale-95 transition-all duration-150 cursor-pointer select-none"
                   >
                     <HiOutlinePlus className="w-4 h-4" />
                     Add item
@@ -348,7 +389,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
               {canWrite && (
                 <button
                   onClick={() => setAddingItem(true)}
-                  className="inline-flex items-center gap-2 bg-espresso text-warm-white text-sm px-5 py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none"
+                  className="inline-flex items-center gap-2 bg-[var(--color-list-accent)] text-warm-white text-sm px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-[0.97] transition-all duration-150 cursor-pointer select-none"
                 >
                   <HiOutlinePlus className="w-4 h-4" />
                   Add your first item
@@ -385,7 +426,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="flex-1 bg-espresso text-warm-white text-sm py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Add item</button>
+                    <button type="submit" className="flex-1 bg-[var(--color-list-accent)] text-warm-white text-sm py-2.5 rounded-xl hover:opacity-90 active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Add item</button>
                     <button type="button" onClick={() => { setAddingItem(false); setNewItemName(""); setNewItemUrl(""); setNewItemQty(1); }} className="px-4 text-sm text-warm-brown border border-warm-border rounded-xl hover:bg-warm-white active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
                   </div>
                 </form>
@@ -419,7 +460,7 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button type="submit" className="flex-1 bg-espresso text-warm-white text-sm py-2.5 rounded-xl hover:bg-espresso-light active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Save</button>
+                      <button type="submit" className="flex-1 bg-[var(--color-list-accent)] text-warm-white text-sm py-2.5 rounded-xl hover:opacity-90 active:scale-[0.97] transition-all duration-150 cursor-pointer select-none">Save</button>
                       <button type="button" onClick={() => setEditingItem(null)} className="px-4 text-sm text-warm-brown border border-warm-border rounded-xl hover:bg-warm-white active:scale-95 transition-all duration-150 cursor-pointer">Cancel</button>
                     </div>
                   </form>
@@ -430,9 +471,9 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
                     className={`flex items-center px-5 py-3.5 hover:bg-cream transition-colors duration-150 group gap-3 ${canWrite ? "cursor-pointer" : ""}`}
                   >
                     {canWrite ? (
-                      <input type="checkbox" checked={item.checked} onChange={() => handleToggle(item)} onClick={(e) => e.stopPropagation()} className="accent-espresso w-4 h-4 shrink-0 cursor-pointer rounded" />
+                      <input type="checkbox" checked={item.checked} onChange={() => handleToggle(item)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 shrink-0 cursor-pointer rounded" style={{ accentColor: "var(--color-list-accent)" }} />
                     ) : (
-                      <span className={`w-4 h-4 shrink-0 rounded border border-warm-border flex items-center justify-center text-xs ${item.checked ? "bg-espresso border-espresso" : ""}`}>
+                      <span className="w-4 h-4 shrink-0 rounded border border-warm-border flex items-center justify-center text-xs" style={item.checked ? { background: "var(--color-list-accent)", borderColor: "var(--color-list-accent)" } : {}}>
                         {item.checked && <span className="text-warm-white text-[10px]">✓</span>}
                       </span>
                     )}
@@ -557,6 +598,32 @@ export default function ListPage({ params }: { params: Promise<{ id: string }> }
       {/* SETTINGS */}
       {tab === "settings" && isOwner && (
         <div className="space-y-4">
+          <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
+            <h2 className="font-serif text-base mb-3">Theme</h2>
+            <div className="grid grid-cols-4 gap-2">
+              {LIST_THEMES.map((t) => {
+                const meta = THEME_META[t];
+                const active = theme === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => handleTheme(t)}
+                    title={meta.label}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all duration-150 cursor-pointer select-none active:scale-95 ${
+                      active ? "border-espresso" : "border-transparent hover:border-warm-border"
+                    }`}
+                  >
+                    <span className="w-8 h-8 rounded-full border border-warm-border flex items-center justify-center" style={{ background: meta.dot + "22" }}>
+                      <span className="w-3 h-3 rounded-full" style={{ background: meta.dot }} />
+                    </span>
+                    <span className="text-[10px] text-warm-muted leading-none">{meta.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {themeMsg && <div className="mt-2"><Alert message={themeMsg} onDismiss={() => setThemeMsg("")} variant="info" /></div>}
+          </div>
+
           <div className="bg-warm-white border border-warm-border rounded-2xl p-4">
             <h2 className="font-serif text-base mb-3">Rename</h2>
             <form onSubmit={handleRename} className="flex gap-2 items-start">

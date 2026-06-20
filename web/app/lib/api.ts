@@ -14,10 +14,14 @@ export function setUnauthenticatedHandler(fn: () => void) { _onUnauthenticated =
 // ── types ────────────────────────────────────────────────────────────────────
 
 export type User = { id: string; name: string; email: string };
+export const LIST_THEMES = ["default","rose","sage","ocean","lavender","sunset","slate","forest"] as const;
+export type ListTheme = typeof LIST_THEMES[number];
+
 export type List = {
   id: string;
   name: string;
   visibility: "PUBLIC" | "PRIVATE";
+  theme: ListTheme;
   createdAt: string;
   updatedAt: string;
 };
@@ -175,6 +179,12 @@ export const lists = {
     json<List>(`/lists/${id}/visibility`, {
       method: "PATCH",
       body: JSON.stringify({ visibility }),
+    }),
+
+  changeTheme: (id: string, theme: ListTheme) =>
+    json<List>(`/lists/${id}/theme`, {
+      method: "PATCH",
+      body: JSON.stringify({ theme }),
     }),
 
   delete: (id: string) => apiFetch(`/lists/${id}`, { method: "DELETE" }),

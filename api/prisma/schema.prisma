@@ -30,6 +30,7 @@ model List {
   invites   Invite[]
   createdAt DateTime     @default(now())
   visibility Visibility @default(PRIVATE)
+  theme     String     @default("default")
   updatedAt DateTime @default(now()) @updatedAt
 }
 

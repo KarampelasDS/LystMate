@@ -106,6 +106,23 @@ export const renameList = async (id: string, name: string, userId: string) => {
   return list;
 };
 
+//Change List Theme
+export const changeListTheme = async (
+  id: string,
+  theme: string,
+  userId: string,
+) => {
+  const member = await prisma.listMember.findUnique({
+    where: { userId_listId: { userId, listId: id } },
+  });
+  if (!member || member.role !== "OWNER") throw new Error("Forbidden");
+  const list = await prisma.list.update({
+    where: { id },
+    data: { theme },
+  });
+  return list;
+};
+
 //Change List Visibility
 export const changeListVisibility = async (
   id: string,

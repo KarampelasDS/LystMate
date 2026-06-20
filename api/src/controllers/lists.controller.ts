@@ -134,6 +134,19 @@ export const changeListVisibility = async (req: Request, res: Response) => {
   }
 };
 
+export const changeListTheme = async (req: Request, res: Response) => {
+  try {
+    const { theme } = req.body;
+    if (!theme) return res.status(400).json({ error: "Theme is required" });
+    const VALID = ["default","rose","sage","ocean","lavender","sunset","slate","forest"];
+    if (!VALID.includes(theme)) return res.status(400).json({ error: "Invalid theme" });
+    const list = await listsService.changeListTheme(req.params.id as string, theme, req.userId!);
+    res.json(list);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
 export const leaveList = async (req: Request, res: Response) => {
   try {
     await listsService.leaveList(req.params.id as string, req.userId!);
