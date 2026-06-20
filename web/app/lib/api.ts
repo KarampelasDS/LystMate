@@ -47,12 +47,13 @@ export type Invite = {
   id: string;
   listId: string;
   inviterId: string;
-  inviteeId: string;
+  inviteeId: string | null;
+  inviteeEmail: string;
   role: string;
   status: string;
   list: List;
   inviter?: InviteUser;
-  invitee?: InviteUser;
+  invitee?: InviteUser | null;
 };
 export type Paginated<T> = {
   data: T[];

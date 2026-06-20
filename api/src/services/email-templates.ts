@@ -81,6 +81,27 @@ export const emailChangeAlertEmail = (newEmail: string) =>
     ${muted("If you did not make this request, please contact support immediately.")}
   `);
 
+export const listInviteEmail = (inviterName: string, listName: string) =>
+  layout(`
+    ${heading("You've been invited")}
+    ${para(`<strong>${inviterName}</strong> has invited you to collaborate on the list <strong>${listName}</strong> on LystMate.`)}
+    <div style="text-align:center;margin:8px 0 28px;">
+      ${button(`${BASE_URL}/invites`, "View invite")}
+    </div>
+    ${muted("If you don't recognise this, you can safely ignore this email.")}
+  `);
+
+export const listInviteNewUserEmail = (inviterName: string, listName: string) =>
+  layout(`
+    ${heading("You've been invited to LystMate")}
+    ${para(`<strong>${inviterName}</strong> has invited you to collaborate on the list <strong>${listName}</strong>.`)}
+    ${para("Create a free LystMate account to accept the invite.")}
+    <div style="text-align:center;margin:8px 0 28px;">
+      ${button(`${BASE_URL}/register`, "Create account")}
+    </div>
+    ${muted("If you don't recognise this, you can safely ignore this email.")}
+  `);
+
 export const resetPasswordEmail = (token: string) =>
   layout(`
     ${heading("Reset your password")}

@@ -182,11 +182,13 @@ export default function InvitesPage() {
             <div className="divide-y divide-warm-border">
               {sent.map((invite) => (
                 <div key={invite.id} className="flex items-center px-5 py-3.5 gap-4 hover:bg-cream transition-colors duration-150">
-                  <FaceAvatar name={invite.invitee.name} size={32} className="rounded-full overflow-hidden shrink-0" />
+                  <FaceAvatar name={invite.invitee?.name ?? invite.inviteeEmail} size={32} className="rounded-full overflow-hidden shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-espresso font-medium truncate">{invite.invitee.name}</p>
+                    <p className="text-sm text-espresso font-medium truncate">
+                      {invite.invitee?.name ?? <span className="text-warm-muted italic">No account yet</span>}
+                    </p>
                     <p className="text-xs text-warm-muted truncate mt-0.5">
-                      {invite.list.name} · as <span className="capitalize">{invite.role.toLowerCase()}</span>
+                      {invite.inviteeEmail} · {invite.list.name} · as <span className="capitalize">{invite.role.toLowerCase()}</span>
                     </p>
                   </div>
                   <button

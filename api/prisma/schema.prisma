@@ -66,14 +66,16 @@ model Invite {
   listId String
   inviter User @relation("InvitesSent",fields:[inviterId],references:[id],onDelete: Cascade)
   inviterId String
-  invitee User @relation("InvitesReceived",fields:[inviteeId],references:[id],onDelete: Cascade)
-  inviteeId String
+  invitee   User?   @relation("InvitesReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+  inviteeId String?
+  inviteeEmail String
   role Role @default(VIEWER)
   status InviteStatus @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
-  @@unique([listId, inviteeId])
+  @@unique([listId, inviteeEmail])
   @@index([inviteeId])
+  @@index([inviteeEmail])
   @@index([inviterId])
 }
 

@@ -156,7 +156,7 @@ export const verifyEmail = async (token: string) => {
   });
   if (!match) throw new Error("Invalid or expired token");
   if (match.expiresAt < new Date()) throw new Error("Invalid or expired token");
-  await prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: match.userId },
     data: {
       emailVerified: true,
@@ -167,6 +167,11 @@ export const verifyEmail = async (token: string) => {
   if (match.pendingEmail) {
     await prisma.refreshToken.deleteMany({ where: { userId: match.userId } });
   }
+  const resolveEmail = match.pendingEmail ?? user.email;
+  await prisma.invite.updateMany({
+    where: { inviteeEmail: resolveEmail, inviteeId: null },
+    data: { inviteeId: user.id },
+  });
   return { message: "Email verified successfully" };
 };
 

@@ -1,4 +1,6 @@
 import prisma from "../utils/prisma";
+import { sendEmail } from "./email.service";
+import { listInviteEmail, listInviteNewUserEmail } from "./email-templates";
 
 export const sendInvite = async (
   listId: string,
@@ -6,27 +8,57 @@ export const sendInvite = async (
   inviteeEmail: string,
   role: "VIEWER" | "MEMBER" = "VIEWER",
 ) => {
-  const user = await prisma.listMember.findUnique({
+  const member = await prisma.listMember.findUnique({
     where: { userId_listId: { userId: inviterId, listId } },
   });
-  if (!user || user.role !== "OWNER") throw new Error("Forbidden");
-  const invitee = await prisma.user.findUnique({
-    where: { email: inviteeEmail },
-  });
-  if (!invitee) throw new Error("Invite could not be sent");
-  const [alreadyMember, existingInvite] = await Promise.all([
-    prisma.listMember.findUnique({ where: { userId_listId: { userId: invitee.id, listId } } }),
-    prisma.invite.findUnique({ where: { listId_inviteeId: { listId, inviteeId: invitee.id } } }),
+  if (!member || member.role !== "OWNER") throw new Error("Forbidden");
+
+  const invitee = await prisma.user.findUnique({ where: { email: inviteeEmail } });
+
+  if (invitee) {
+    const [alreadyMember, existingInvite] = await Promise.all([
+      prisma.listMember.findUnique({ where: { userId_listId: { userId: invitee.id, listId } } }),
+      prisma.invite.findUnique({ where: { listId_inviteeEmail: { listId, inviteeEmail } } }),
+    ]);
+    if (alreadyMember || existingInvite) throw new Error("Invite could not be sent");
+  } else {
+    const existingInvite = await prisma.invite.findUnique({
+      where: { listId_inviteeEmail: { listId, inviteeEmail } },
+    });
+    if (existingInvite) throw new Error("Invite could not be sent");
+  }
+
+  const [invite, inviter, list] = await Promise.all([
+    prisma.invite.create({
+      data: {
+        listId,
+        inviterId,
+        inviteeId: invitee?.id ?? undefined,
+        inviteeEmail,
+        role,
+      },
+    }),
+    prisma.user.findUnique({ where: { id: inviterId }, select: { name: true } }),
+    prisma.list.findUnique({ where: { id: listId }, select: { name: true } }),
   ]);
-  if (alreadyMember || existingInvite) throw new Error("Invite could not be sent");
-  const invite = await prisma.invite.create({
-    data: {
-      listId,
-      inviterId,
-      inviteeId: invitee.id,
-      role,
-    },
-  });
+
+  const inviterName = inviter?.name ?? "Someone";
+  const listName = list?.name ?? "a list";
+
+  if (invitee) {
+    sendEmail(
+      inviteeEmail,
+      `${inviterName} invited you to a list on LystMate`,
+      listInviteEmail(inviterName, listName),
+    ).catch((err) => console.error("Failed to send invite email:", err));
+  } else {
+    sendEmail(
+      inviteeEmail,
+      `${inviterName} invited you to LystMate`,
+      listInviteNewUserEmail(inviterName, listName),
+    ).catch((err) => console.error("Failed to send invite email:", err));
+  }
+
   return invite;
 };
 
