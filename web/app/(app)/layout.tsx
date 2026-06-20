@@ -8,7 +8,6 @@ import {
   HiOutlineEnvelope, HiEnvelope,
   HiOutlineCog6Tooth, HiCog6Tooth,
   HiArrowRightOnRectangle, HiOutlineUserCircle,
-  HiClipboardDocumentCheck,
 } from "react-icons/hi2";
 import { FaceAvatar } from "@/app/components/face-avatar";
 import { useAuth } from "@/app/contexts/auth-context";
@@ -49,9 +48,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             href="/dashboard"
             className="flex items-center gap-2 select-none group"
           >
-            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shrink-0" style={{ background: "#D7A679" }}>
-              <HiClipboardDocumentCheck className="w-6 h-6 text-warm-white" />
-            </div>
             <span className="font-serif text-2xl text-espresso leading-none">LystMate</span>
           </Link>
 
